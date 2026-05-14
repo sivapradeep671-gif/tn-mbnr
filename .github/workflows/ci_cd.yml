@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ gh-pages ]
+    branches: [ main ]
   pull_request:
-    branches: [ gh-pages ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -50,7 +50,7 @@ jobs:
           VITE_BASE_PATH: "/tn-mbnr/"
 
       - name: Upload Pages Artifact
-        if: github.ref == 'refs/heads/gh-pages'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
@@ -58,7 +58,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
-    if: github.ref == 'refs/heads/gh-pages'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
