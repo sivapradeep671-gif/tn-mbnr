@@ -21,6 +21,7 @@ vi.mock('./useToast', () => ({
 describe('useBusinesses Hook', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        localStorage.clear();
     });
 
     it('should fetch businesses and reports on mount', async () => {
@@ -86,7 +87,7 @@ describe('useBusinesses Hook', () => {
         });
 
         expect(result.current.error).toBe('Network Error');
-        expect(showToast).toHaveBeenCalledWith('Sync failed', 'error');
+        expect(showToast).toHaveBeenCalledWith('Grid Sync Failed: Running Sandbox Mode', 'error');
     });
 
     it('should update business status successfully', async () => {

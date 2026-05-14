@@ -6,7 +6,7 @@
   "homepage": "https://sivapradeep671-gif.github.io/tn-mbnr/",
   "scripts": {
     "dev": "vite",
-    "start": "node server/index.cjs",
+    "start": "node server/cluster.cjs",
     "server": "node server/index.cjs",
     "sandbox:setup": "node scripts/seed-sandbox.cjs",
     "sandbox": "set DB_PATH=./server/tn_mbnr_sandbox.db&& node scripts/seed-sandbox.cjs && node server/index.cjs",

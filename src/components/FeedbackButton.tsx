@@ -23,7 +23,7 @@ export const FeedbackButton = () => {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-4 right-4 z-50 bg-yellow-500 hover:bg-yellow-400 text-slate-900 p-3 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center"
+                className="fixed bottom-4 left-4 z-50 bg-yellow-500 hover:bg-yellow-400 text-slate-900 p-3 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center"
                 title="Send Feedback"
             >
                 <MessageSquare className="h-6 w-6" />

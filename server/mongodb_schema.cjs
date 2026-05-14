@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 // --- Business Schema (Registry Node) ---
 const businessSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
+    tenant_id: { type: String, required: true, default: 'tn-chennai', index: true },
     legalName: String,
     tradeName: { type: String, index: true },
     type: String,
@@ -43,6 +44,7 @@ const businessSchema = new mongoose.Schema({
 // --- Ledger Schema (Blockchain persistence) ---
 const ledgerSchema = new mongoose.Schema({
     index: { type: Number, required: true, unique: true },
+    tenant_id: { type: String, required: true, default: 'tn-chennai', index: true },
     timestamp: { type: String, required: true },
     data: { type: mongoose.Schema.Types.Mixed, required: true },
     previousHash: { type: String, required: true },
@@ -53,6 +55,7 @@ const ledgerSchema = new mongoose.Schema({
 // --- Scan Schema (Verification Intel) ---
 const scanSchema = new mongoose.Schema({
     business_id: { type: String, index: true },
+    tenant_id: { type: String, required: true, default: 'tn-chennai', index: true },
     token: String,
     scan_lat: Number,
     scan_lng: Number,
@@ -65,6 +68,7 @@ const scanSchema = new mongoose.Schema({
 // --- Report Schema (Citizen Intel) ---
 const reportSchema = new mongoose.Schema({
     business_name: String,
+    tenant_id: { type: String, required: true, default: 'tn-chennai', index: true },
     location: String,
     description: String,
     category: String,
@@ -77,6 +81,7 @@ const reportSchema = new mongoose.Schema({
 // --- Registry Approval Schema (Workflow) ---
 const approvalSchema = new mongoose.Schema({
     registry_id: { type: String, index: true },
+    tenant_id: { type: String, required: true, default: 'tn-chennai', index: true },
     stage: String,
     status: String,
     acted_by_user_id: String,

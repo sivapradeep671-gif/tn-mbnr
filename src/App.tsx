@@ -6,12 +6,14 @@ import { LanguageProvider } from './context/LanguageContext';
 import { FeedbackButton } from './components/FeedbackButton';
 import { Login } from './components/Login';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { useBusinesses } from './hooks/useBusinesses';
 import { ToastContainer } from './components/Toast';
 import { api } from './api/client';
 import { Mail, Shield, Zap, AlertTriangle } from 'lucide-react';
 import { useLanguage } from './context/LanguageContext';
 import type { GlobalHandlers } from './types/types';
+import { SaaSProvider, useSaaS } from './context/SaaSContext';
 
 // Tell TypeScript about our custom window properties
 declare global {
@@ -29,17 +31,18 @@ const BlockchainExplorer = lazy(() => import('./components/BlockchainExplorer').
 const PublicRegistry = lazy(() => import('./components/PublicRegistry').then(m => ({ default: m.PublicRegistry })));
 const TechArchitecture = lazy(() => import('./components/TechArchitecture').then(m => ({ default: m.TechArchitecture })));
 const HackathonJury = lazy(() => import('./components/HackathonJury').then(m => ({ default: m.HackathonJury })));
-const DemoControls = lazy(() => import('./components/DemoControls').then(m => ({ default: m.DemoControls })));
+const DemoControls = lazy(() => import('./components/DemoControls'));
 const MerchantDashboard = lazy(() => import('./components/MerchantDashboard').then(m => ({ default: m.MerchantDashboard })));
 const InspectorDashboard = lazy(() => import('./components/InspectorDashboard').then(m => ({ default: m.InspectorDashboard })));
 const ExecutiveDashboard = lazy(() => import('./components/ExecutiveDashboard').then(m => ({ default: m.ExecutiveDashboard })));
-const AIAssistant = lazy(() => import('./components/extensions/AIAssistant').then(m => ({ default: m.AIAssistant })));
+const AIAssistant = lazy(() => import('./components/extensions/AIAssistant'));
 const SaaSMarketplace = lazy(() => import('./components/SaaSMarketplace').then(m => ({ default: m.SaaSMarketplace })));
 const SaaSPricing = lazy(() => import('./components/SaaSPricing').then(m => ({ default: m.SaaSPricing })));
 const SaaSAdmin = lazy(() => import('./components/SaaSAdmin').then(m => ({ default: m.SaaSAdmin })));
-import { SaaSProvider, useSaaS } from './context/SaaSContext';
+const BusinessHealthDashboard = lazy(() => import('./components/BusinessHealthScore').then(m => ({ default: m.BusinessHealthDashboard })));
+const GrievanceRedressal = lazy(() => import('./components/GrievanceRedressal').then(m => ({ default: m.GrievanceRedressal })));
 
-const APP_VERSION = '1.1.0 (Senior Build)';
+const APP_VERSION = '1.2.0 (Dual-Theme Build)';
 
 function LoadingFallback() {
   return (
@@ -195,6 +198,10 @@ function AppContent() {
                 return <InspectorDashboard businesses={businesses} onUpdateStatus={updateStatus} />;
             case 'EXECUTIVE_DASHBOARD':
                 return <ExecutiveDashboard businesses={businesses} reports={reports} />;
+            case 'HEALTH_SCORE':
+                return <BusinessHealthDashboard />;
+            case 'GRIEVANCE':
+                return <GrievanceRedressal businesses={businesses} />;
             default:
               return (
                 <Hero 
@@ -217,7 +224,7 @@ function AppContent() {
       {/* Universal Priority Banner Stack */}
       <div className="fixed top-0 left-0 w-full z-[60] flex flex-col">
         <div className="w-full bg-yellow-500/95 text-slate-900 text-[9px] font-black py-1.5 px-4 text-center tracking-[0.3em] uppercase border-b border-yellow-600/20">
-          Enterprise Build – {currentTenant.name} Platform v{APP_VERSION}
+          {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
 
         {isBackendOffline && (
@@ -242,7 +249,9 @@ function AppContent() {
         )}
       </main>
 
-      <AIAssistant />
+      <Suspense fallback={null}>
+        <AIAssistant />
+      </Suspense>
 
       <footer className="max-w-4xl mx-auto px-4 py-12 text-center">
         <p className="mb-4 text-slate-400 font-medium italic">"Scan once, know the truth."</p>
@@ -259,15 +268,15 @@ function AppContent() {
         </div>
         <p className="text-slate-500 text-sm mb-4">{t.footer.rights}</p>
         <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800 inline-block">
-          <p className="text-[10px] text-slate-500 leading-relaxed max-w-lg mx-auto uppercase tracking-tighter">
-            <strong>DISCLAIMER:</strong> This is an <strong>enterprise research platform</strong> part of the TN-MBNR TrustReg TN Pilot.
-            This is <strong>NOT</strong> an official service of the Government of Tamil Nadu.
+          <p className="text-[10px] text-slate-500 leading-relaxed max-w-lg mx-auto uppercase tracking-tighter" dangerouslySetInnerHTML={{ __html: t.footer.disclaimer.replace('DISCLAIMER:', '<strong>DISCLAIMER:</strong>').replace('NOT', '<strong>NOT</strong>').replace('பொறுப்புத் துறப்பு:', '<strong>பொறுப்புத் துறப்பு:</strong>').replace('அல்ல', '<strong>அல்ல</strong>') }}>
           </p>
         </div>
         <p className="mt-4 text-[10px] text-slate-700">v{APP_VERSION}</p>
       </footer>
       <FeedbackButton />
-      <DemoControls />
+      <Suspense fallback={null}>
+        <DemoControls />
+      </Suspense>
     </div>
   );
 }
@@ -275,11 +284,13 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <SaaSProvider>
-        <LanguageProvider>
-          <AppContent />
-        </LanguageProvider>
-      </SaaSProvider>
+      <ThemeProvider>
+        <SaaSProvider>
+          <LanguageProvider>
+            <AppContent />
+          </LanguageProvider>
+        </SaaSProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

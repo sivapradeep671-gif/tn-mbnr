@@ -12,8 +12,12 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tn_mbn
 
 const seedData = async () => {
     try {
-        console.log('📡 Connecting to TN-MBNR MongoDB Cluster...');
-        await mongoose.connect(MONGODB_URI);
+        const safeUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
+        console.log(`📡 Connecting to TN-MBNR MongoDB Cluster: ${safeUri}`);
+        await mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 10000,
+            retryWrites: true,
+        });
         
         console.log('🧹 Clearing legacy node data...');
         await Business.deleteMany({});

@@ -1,5 +1,5 @@
 import React from 'react'; 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, Map as MapIcon, Filter, Layers, MapPin, ShieldCheck, Activity } from 'lucide-react';
 import type { Business, CitizenReport } from '../types/types';
@@ -197,7 +197,7 @@ export const MapExplorer: React.FC<MapExplorerProps> = ({ businesses, reports })
                         );
                     })}
                     {isGridMode && pulses.map(pulse => (
-                        <L.Circle 
+                        <Circle 
                             key={pulse.id}
                             center={pulse.pos}
                             radius={50000}

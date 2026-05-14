@@ -8,6 +8,20 @@ vi.mock('../hooks/useToast', () => ({
     showToast: vi.fn(),
 }));
 
+// Mock Language Context
+vi.mock('../context/LanguageContext', () => ({
+    useLanguage: () => ({
+        t: {
+            voice: {
+                placeholder: 'placeholder',
+                listening: 'listening',
+                captured: 'Speech captured',
+                error: 'Speech error'
+            }
+        }
+    })
+}));
+
 // Mock SpeechRecognition API
 const createMockRecognition = () => ({
     start: vi.fn(),

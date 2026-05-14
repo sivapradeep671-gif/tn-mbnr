@@ -31,8 +31,10 @@ const repository = {
     },
 
     addBlockToLedger: async (block) => {
+        // Auto-calculate index since Block objects don't carry one
+        const count = await schemas.Ledger.countDocuments();
         const newBlock = new schemas.Ledger({
-            index: block.index_id || block.index,
+            index: block.index_id || block.index || count,
             timestamp: block.timestamp,
             data: block.data,
             previousHash: block.previousHash,

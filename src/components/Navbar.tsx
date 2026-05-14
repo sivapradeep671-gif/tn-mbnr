@@ -27,13 +27,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView }) =
         setIsMobileMenuOpen(false);
     };
 
-    const navItems = ['HOME', 'REGISTER', 'MAP', 'REGISTRY', 'REPORT', 'SCAN', 'MARKETPLACE', 'PRICING'].filter(view => {
-        if (!user) return ['HOME', 'REGISTER', 'MAP', 'REGISTRY', 'SCAN', 'MARKETPLACE', 'PRICING'].includes(view);
-        if (user.role === 'citizen') return ['HOME', 'MAP', 'REGISTRY', 'REPORT', 'SCAN', 'MARKETPLACE', 'PRICING'].includes(view);
-        if (user.role === 'business') return ['HOME', 'REGISTER', 'MAP', 'REGISTRY', 'SCAN', 'MARKETPLACE', 'PRICING'].includes(view);
-        if (user.role === 'inspector') return ['HOME', 'INSPECTOR_DASHBOARD', 'MAP', 'REGISTRY', 'SCAN', 'MARKETPLACE'].includes(view);
-        if (user.role === 'admin') return ['HOME', 'DASHBOARD', 'SAAS_ADMIN', 'MAP', 'REGISTRY', 'SCAN', 'MARKETPLACE', 'PRICING'].includes(view);
-        if (user.role === 'executive') return ['HOME', 'EXECUTIVE_DASHBOARD', 'SAAS_ADMIN', 'MAP', 'REGISTRY', 'SCAN', 'MARKETPLACE', 'PRICING'].includes(view);
+    const navItems = ['HOME', 'REGISTER', 'MAP', 'REGISTRY', 'REPORT', 'SCAN', 'HEALTH_SCORE', 'GRIEVANCE', 'MARKETPLACE', 'PRICING'].filter(view => {
+        if (!user) return ['HOME', 'REGISTER', 'MAP', 'REGISTRY', 'SCAN', 'HEALTH_SCORE', 'MARKETPLACE', 'PRICING'].includes(view);
+        if (user.role === 'citizen') return ['HOME', 'MAP', 'REGISTRY', 'REPORT', 'SCAN', 'GRIEVANCE', 'MARKETPLACE', 'PRICING'].includes(view);
+        if (user.role === 'business') return ['HOME', 'REGISTER', 'MAP', 'REGISTRY', 'SCAN', 'HEALTH_SCORE', 'GRIEVANCE', 'MARKETPLACE', 'PRICING'].includes(view);
+        if (user.role === 'inspector') return ['HOME', 'INSPECTOR_DASHBOARD', 'MAP', 'REGISTRY', 'SCAN', 'HEALTH_SCORE', 'GRIEVANCE', 'MARKETPLACE'].includes(view);
+        if (user.role === 'admin') return ['HOME', 'DASHBOARD', 'SAAS_ADMIN', 'MAP', 'REGISTRY', 'SCAN', 'HEALTH_SCORE', 'GRIEVANCE', 'MARKETPLACE', 'PRICING'].includes(view);
+        if (user.role === 'executive') return ['HOME', 'EXECUTIVE_DASHBOARD', 'SAAS_ADMIN', 'MAP', 'REGISTRY', 'SCAN', 'HEALTH_SCORE', 'MARKETPLACE', 'PRICING'].includes(view);
         return true;
     });
 
@@ -49,6 +49,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView }) =
         SAAS_ADMIN: t.nav.saas_admin,
         INSPECTOR_DASHBOARD: 'Inspection Hub',
         EXECUTIVE_DASHBOARD: 'Strategic Command',
+        HEALTH_SCORE: language === 'en' ? 'Health Score' : 'ஆரோக்கியம்',
+        GRIEVANCE: language === 'en' ? 'Grievance' : 'குறை தீர்வு',
     };
 
     return (

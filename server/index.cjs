@@ -42,37 +42,52 @@ const tnMbnrChain = new Blockchain();
 
 // --- MongoDB Bootstrapper ---
 (async () => {
-    const isMongoConnected = await mongoRepo.connectDB();
-    if (isMongoConnected) {
-        console.log("🚀 Initializing Blockchain from MongoDB Local Node...");
-        const blocks = await mongoRepo.repository.getLedger();
-        if (blocks.length === 0) {
-            const genesisBlock = tnMbnrChain.createGenesisBlock();
-            await mongoRepo.repository.addBlockToLedger(genesisBlock);
-            console.log("Genesis Block established in MongoDB.");
-        } else {
-            tnMbnrChain.chain = blocks.map(row => {
-                const b = new Block(row.timestamp, row.data, row.previousHash);
-                b.hash = row.hash;
-                b.nonce = row.nonce;
-                return b;
-            });
-            console.log(`Blockchain synchronized with ${tnMbnrChain.chain.length} blocks.`);
-        }
-    } else {
-        console.warn("⚠️  MongoDB offline. Falling back to SQLite Local Registry.");
-        // Legacy SQLite Loader
-        db.all("SELECT * FROM ledger ORDER BY index_id ASC", [], (err, rows) => {
-            if (err) console.error("Error loading SQLite ledger:", err);
-            else if (rows && rows.length > 0) {
-                tnMbnrChain.chain = rows.map(row => {
-                    const b = new Block(row.timestamp, JSON.parse(row.data), row.previousHash);
+    try {
+        const isMongoConnected = await mongoRepo.connectDB();
+        if (isMongoConnected) {
+            logger.info("Initializing Blockchain from MongoDB Local Node");
+            const blocks = await mongoRepo.repository.getLedger();
+            if (blocks.length === 0) {
+                try {
+                    const genesisBlock = tnMbnrChain.createGenesisBlock();
+                    await mongoRepo.repository.addBlockToLedger(genesisBlock);
+                    logger.info("Genesis Block established in MongoDB.");
+                } catch (genesisErr) {
+                    // Handle duplicate key (from a previous partial run)
+                    if (genesisErr.code === 11000) {
+                        logger.info("Genesis Block already exists in MongoDB. Skipping.");
+                    } else {
+                        logger.warn("Genesis block creation failed", { error: genesisErr.message });
+                    }
+                }
+            } else {
+                tnMbnrChain.chain = blocks.map(row => {
+                    const b = new Block(row.timestamp, row.data, row.previousHash);
                     b.hash = row.hash;
                     b.nonce = row.nonce;
                     return b;
                 });
+                logger.info("Blockchain synchronized from MongoDB", { blocks: tnMbnrChain.chain.length });
             }
-        });
+        } else {
+            logger.warn("MongoDB offline. Falling back to SQLite Local Registry.");
+            // Legacy SQLite Loader
+            db.all("SELECT * FROM ledger ORDER BY index_id ASC", [], (err, rows) => {
+                if (err) logger.error("Error loading SQLite ledger", { error: err.message });
+                else if (rows && rows.length > 0) {
+                    tnMbnrChain.chain = rows.map(row => {
+                        const b = new Block(row.timestamp, JSON.parse(row.data), row.previousHash);
+                        b.hash = row.hash;
+                        b.nonce = row.nonce;
+                        return b;
+                    });
+                    logger.info("Blockchain synchronized from SQLite", { blocks: tnMbnrChain.chain.length });
+                }
+            });
+        }
+    } catch (bootErr) {
+        logger.error("MongoDB bootstrap error", { error: bootErr.message });
+        logger.warn("Continuing with SQLite fallback");
     }
 })();
 
@@ -107,8 +122,12 @@ const apiLimiter = rateLimit({
     legacyHeaders: false
 });
 
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? ['https://sivapradeep671-gif.github.io', 'https://tn-mbnr.onrender.com'] 
+    : '*';
+
 app.use(cors({
-    origin: '*', // Simplified for demo, in production use specific origin whitelist
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -174,6 +193,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
             const row = await mongoRepo.models.Business.findOne({ contactNumber: phone }).lean();
             const businessId = row ? row.id : `BIZ-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
             const token = generateToken({ id: businessId, phone, role });
+            logger.info('User Login', { user_id: businessId, role, method: 'mongodb', ip: req.ip });
             return res.json({ message: 'Login successful', token, user: { id: businessId, phone, role } });
         }
     }
@@ -187,15 +207,18 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
                 phone,
                 role
             });
+            logger.info('User Login', { user_id: businessId, role, method: 'sqlite', ip: req.ip });
             res.json({ message: 'Login successful', token, user: { id: businessId, phone, role } });
         });
     } else {
+        const userId = `USER-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
         const token = generateToken({
-            id: `USER-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            id: userId,
             phone,
             role
         });
-        res.json({ message: 'Login successful', token, user: { phone, role } });
+        logger.info('User Login', { user_id: userId, role, ip: req.ip });
+        res.json({ message: 'Login successful', token, user: { id: userId, phone, role } });
     }
 });
 
@@ -307,9 +330,9 @@ app.post('/api/businesses', registrationLimiter, validateBody(businessSchema), (
                     license_status: licenseTimestamps.license_status,
                     sla_deadline_at: slaDeadline
                 });
-                console.log(`✅ Business ${b.id} Synced to MongoDB Cluster`);
+                logger.info('Business Synced to MongoDB', { business_id: b.id });
             } catch (mErr) {
-                console.warn(`⚠️ MongoDB Sync Failed for ${b.id}:`, mErr.message);
+                logger.warn('MongoDB Sync Failed', { business_id: b.id, error: mErr.message });
             }
         }
 
@@ -454,6 +477,8 @@ app.post('/api/verify-scan', apiLimiter, (req, res) => {
         // Log scan
         db.run("INSERT INTO scans (business_id, token, scan_lat, scan_lng, result, distance) VALUES (?,?,?,?,?,?)",
             [payload.id, token.substring(0, 20), scannerLocation.lat, scannerLocation.lng, finalStatus, distance]);
+
+        logger.info('QR Verification', { business_id: payload.id, status: finalStatus, distance: Math.round(distance) });
 
         res.json({
             status: finalStatus,
@@ -630,6 +655,350 @@ app.get('/api/reports', apiLimiter, (req, res) => {
     db.all("SELECT * FROM reports ORDER BY timestamp DESC", [], (err, rows) => {
         if (err) return res.status(400).json({ error: err.message });
         res.json({ message: "success", data: rows });
+    });
+});
+
+// ============================================================
+// TIER-1 FEATURE: Business Health Credit Score
+// Factors: Tax status, license status, risk score, citizen reports,
+//          registration age, scan history
+// Score: 0-100
+// ============================================================
+
+const calculateHealthScore = (business, reportCount = 0, scanStats = { total: 0, failed: 0 }) => {
+    let score = 50; // Base score
+
+    // Tax compliance (+30 max)
+    const taxFields = ['property_tax_status', 'water_tax_status', 'professional_tax_status'];
+    taxFields.forEach(field => {
+        const val = business[field];
+        if (val === 'Paid' || val === 'Cleared') score += 10;
+        else if (val === 'Pending') score += 3;
+        else if (val === 'Defaulted') score -= 5;
+    });
+
+    // License status (+15 max)
+    if (business.license_status === 'ACTIVE') score += 15;
+    else if (business.license_status === 'GRACE_PERIOD') score += 5;
+    else if (business.license_status === 'EXPIRED') score -= 10;
+    else if (business.license_status === 'SUSPENDED') score -= 15;
+
+    // Verification status (+10)
+    if (business.status === 'Verified') score += 10;
+    else if (business.status === 'Rejected') score -= 20;
+
+    // Citizen reports (-5 each, max -15)
+    score -= Math.min(reportCount * 5, 15);
+
+    // Scan fraud history (-10 per failed scan, max -20)
+    score -= Math.min(scanStats.failed * 10, 20);
+
+    // Risk score modifier
+    if (business.riskScore && business.riskScore > 7) score -= 10;
+    else if (business.riskScore && business.riskScore < 3) score += 5;
+
+    // Registration age bonus (older = more trusted)
+    if (business.registrationDate) {
+        const ageMonths = Math.floor((Date.now() - new Date(business.registrationDate).getTime()) / (1000 * 60 * 60 * 24 * 30));
+        if (ageMonths > 12) score += 5;
+        if (ageMonths > 24) score += 5;
+    }
+
+    // Clamp to 0-100
+    return Math.max(0, Math.min(100, score));
+};
+
+const getHealthGrade = (score) => {
+    if (score >= 90) return { grade: 'A+', label: 'Exemplary', color: '#22c55e' };
+    if (score >= 80) return { grade: 'A', label: 'Excellent', color: '#4ade80' };
+    if (score >= 70) return { grade: 'B', label: 'Good', color: '#84cc16' };
+    if (score >= 60) return { grade: 'C', label: 'Fair', color: '#eab308' };
+    if (score >= 40) return { grade: 'D', label: 'At Risk', color: '#f97316' };
+    return { grade: 'F', label: 'Critical', color: '#ef4444' };
+};
+
+app.get('/api/health-score/:businessId', apiLimiter, (req, res) => {
+    const { businessId } = req.params;
+
+    db.get("SELECT * FROM businesses WHERE id = ?", [businessId], (err, business) => {
+        if (err || !business) return res.status(404).json({ error: "Business not found" });
+
+        // Get citizen report count
+        db.get("SELECT COUNT(*) as count FROM reports WHERE business_name = ?", [business.tradeName], (err2, reportRow) => {
+            const reportCount = reportRow?.count || 0;
+
+            // Get scan statistics
+            db.get(
+                "SELECT COUNT(*) as total, SUM(CASE WHEN result != 'VALID' THEN 1 ELSE 0 END) as failed FROM scans WHERE business_id = ?",
+                [businessId],
+                (err3, scanRow) => {
+                    const scanStats = { total: scanRow?.total || 0, failed: scanRow?.failed || 0 };
+                    const score = calculateHealthScore(business, reportCount, scanStats);
+                    const grading = getHealthGrade(score);
+
+                    res.json({
+                        message: "success",
+                        businessId: business.id,
+                        tradeName: business.tradeName,
+                        healthScore: score,
+                        grade: grading.grade,
+                        label: grading.label,
+                        color: grading.color,
+                        breakdown: {
+                            taxCompliance: {
+                                property: business.property_tax_status || 'Unknown',
+                                water: business.water_tax_status || 'Unknown',
+                                professional: business.professional_tax_status || 'Unknown'
+                            },
+                            licenseStatus: business.license_status || 'Unknown',
+                            verificationStatus: business.status,
+                            citizenReports: reportCount,
+                            fraudScans: scanStats.failed,
+                            riskScore: business.riskScore || 0
+                        },
+                        eligibility: {
+                            subsidyAccess: score >= 80,
+                            fastTrackRenewal: score >= 70,
+                            municipalContracts: score >= 85,
+                            prioritySupport: score >= 60
+                        }
+                    });
+                }
+            );
+        });
+    });
+});
+
+// Bulk health scores for dashboard
+app.get('/api/health-scores', apiLimiter, (req, res) => {
+    db.all("SELECT * FROM businesses", [], (err, businesses) => {
+        if (err) return res.status(400).json({ error: err.message });
+
+        const scores = businesses.map(b => {
+            const score = calculateHealthScore(b);
+            const grading = getHealthGrade(score);
+            return {
+                id: b.id,
+                tradeName: b.tradeName,
+                healthScore: score,
+                grade: grading.grade,
+                label: grading.label,
+                color: grading.color,
+                status: b.status,
+                license_status: b.license_status
+            };
+        });
+
+        // Sort by score descending
+        scores.sort((a, b) => b.healthScore - a.healthScore);
+
+        const avg = scores.length > 0 ? Math.round(scores.reduce((s, b) => s + b.healthScore, 0) / scores.length) : 0;
+
+        res.json({
+            message: "success",
+            data: scores,
+            summary: {
+                totalBusinesses: scores.length,
+                averageScore: avg,
+                exemplary: scores.filter(s => s.healthScore >= 90).length,
+                atRisk: scores.filter(s => s.healthScore < 40).length,
+                distribution: {
+                    'A+': scores.filter(s => s.grade === 'A+').length,
+                    'A': scores.filter(s => s.grade === 'A').length,
+                    'B': scores.filter(s => s.grade === 'B').length,
+                    'C': scores.filter(s => s.grade === 'C').length,
+                    'D': scores.filter(s => s.grade === 'D').length,
+                    'F': scores.filter(s => s.grade === 'F').length,
+                }
+            }
+        });
+    });
+});
+
+// ============================================================
+// TIER-1 FEATURE: Grievance Redressal Pipeline
+// Allows businesses to contest AI rejections or flagged statuses
+// Human-in-the-loop administrative justice
+// ============================================================
+
+// Create grievances table
+db.run(`CREATE TABLE IF NOT EXISTS grievances (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_id TEXT NOT NULL,
+    business_name TEXT,
+    grievance_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT DEFAULT 'SUBMITTED',
+    priority TEXT DEFAULT 'NORMAL',
+    submitted_by TEXT,
+    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_by TEXT,
+    resolved_at DATETIME,
+    resolution_notes TEXT,
+    escalation_level INTEGER DEFAULT 0
+)`);
+
+app.post('/api/grievances', apiLimiter, (req, res) => {
+    const { business_id, business_name, grievance_type, description, submitted_by } = req.body;
+
+    if (!business_id || !grievance_type || !description) {
+        return res.status(400).json({ error: "Missing required fields: business_id, grievance_type, description" });
+    }
+
+    const validTypes = ['NAME_REJECTION', 'STATUS_DISPUTE', 'TAX_ERROR', 'LICENSE_ISSUE', 'FRAUD_FALSE_POSITIVE', 'OTHER'];
+    if (!validTypes.includes(grievance_type)) {
+        return res.status(400).json({ error: `Invalid grievance type. Must be: ${validTypes.join(', ')}` });
+    }
+
+    // Auto-set priority based on type
+    let priority = 'NORMAL';
+    if (grievance_type === 'FRAUD_FALSE_POSITIVE') priority = 'HIGH';
+    if (grievance_type === 'STATUS_DISPUTE') priority = 'HIGH';
+
+    const sql = `INSERT INTO grievances (business_id, business_name, grievance_type, description, priority, submitted_by) VALUES (?,?,?,?,?,?)`;
+    db.run(sql, [business_id, business_name || '', grievance_type, description, priority, submitted_by || 'anonymous'], function(err) {
+        if (err) return res.status(400).json({ error: err.message });
+
+        // Add to blockchain audit trail
+        const auditBlock = new Block(new Date().toISOString(), {
+            action: 'GrievanceFiled',
+            grievanceId: this.lastID,
+            businessId: business_id,
+            type: grievance_type,
+            priority
+        });
+        tnMbnrChain.addBlock(auditBlock);
+
+        res.json({
+            message: "Grievance submitted successfully",
+            grievanceId: this.lastID,
+            status: 'SUBMITTED',
+            priority,
+            estimatedResolution: '48-72 hours',
+            blockHash: auditBlock.hash
+        });
+    });
+});
+
+app.get('/api/grievances', apiLimiter, (req, res) => {
+    const { status, business_id } = req.query;
+    let sql = "SELECT * FROM grievances";
+    const params = [];
+    const conditions = [];
+
+    if (status) { conditions.push("status = ?"); params.push(status); }
+    if (business_id) { conditions.push("business_id = ?"); params.push(business_id); }
+
+    if (conditions.length > 0) sql += " WHERE " + conditions.join(" AND ");
+    sql += " ORDER BY submitted_at DESC";
+
+    db.all(sql, params, (err, rows) => {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({
+            message: "success",
+            data: rows,
+            summary: {
+                total: rows.length,
+                submitted: rows.filter(r => r.status === 'SUBMITTED').length,
+                underReview: rows.filter(r => r.status === 'UNDER_REVIEW').length,
+                resolved: rows.filter(r => r.status === 'RESOLVED').length,
+                rejected: rows.filter(r => r.status === 'REJECTED').length
+            }
+        });
+    });
+});
+
+app.put('/api/grievances/:id/resolve', apiLimiter, authenticateToken, authorizeRoles('admin'), (req, res) => {
+    const { id } = req.params;
+    const { status, resolution_notes } = req.body;
+
+    if (!['UNDER_REVIEW', 'RESOLVED', 'REJECTED', 'ESCALATED'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const escalation = status === 'ESCALATED' ? ', escalation_level = escalation_level + 1' : '';
+    const sql = `UPDATE grievances SET status = ?, resolved_by = ?, resolved_at = CURRENT_TIMESTAMP, resolution_notes = ?${escalation} WHERE id = ?`;
+
+    db.run(sql, [status, req.user.id, resolution_notes || '', id], function(err) {
+        if (err) return res.status(400).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: "Grievance not found" });
+
+        // Audit trail
+        const auditBlock = new Block(new Date().toISOString(), {
+            action: 'GrievanceResolved',
+            grievanceId: parseInt(id),
+            newStatus: status,
+            officer: req.user.id
+        });
+        tnMbnrChain.addBlock(auditBlock);
+
+        res.json({ message: "success", status, blockHash: auditBlock.hash });
+    });
+});
+
+// ============================================================
+// TIER-1 FEATURE: 3rd-Party Public Verification API
+// Allows external apps (Swiggy, Zomato, etc.) to verify
+// if a business is municipally registered
+// No auth required — public read-only API
+// ============================================================
+
+app.get('/api/v1/verify/:businessId', (req, res) => {
+    const { businessId } = req.params;
+
+    // Set CORS headers for public access
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-API-Version', '1.0');
+    res.setHeader('X-Powered-By', 'TN-MBNR TrustReg Platform');
+
+    db.get("SELECT * FROM businesses WHERE id = ?", [businessId], (err, business) => {
+        if (err || !business) {
+            return res.status(404).json({
+                verified: false,
+                error: "Business not found in municipal registry",
+                queryId: businessId,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        const score = calculateHealthScore(business);
+        const grading = getHealthGrade(score);
+
+        res.json({
+            verified: business.status === 'Verified',
+            registrationId: business.id,
+            tradeName: business.tradeName,
+            legalName: business.legalName,
+            type: business.type,
+            category: business.category,
+            status: business.status,
+            license: {
+                status: business.license_status || 'UNKNOWN',
+                validTill: business.license_valid_till,
+                graceEndsAt: business.grace_ends_at
+            },
+            healthScore: {
+                score,
+                grade: grading.grade,
+                label: grading.label
+            },
+            location: {
+                address: business.address,
+                ward: business.municipal_ward || 'N/A',
+                geoVerified: !!(business.latitude && business.longitude)
+            },
+            taxCompliance: {
+                property: business.property_tax_status || 'Unknown',
+                water: business.water_tax_status || 'Unknown',
+                professional: business.professional_tax_status || 'Unknown'
+            },
+            meta: {
+                registeredOn: business.registrationDate,
+                lastVerified: new Date().toISOString(),
+                apiVersion: '1.0',
+                provider: 'TN-MBNR Municipal Authority'
+            }
+        });
     });
 });
 

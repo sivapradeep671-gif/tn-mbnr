@@ -193,7 +193,9 @@ export const translations = {
             }
         },
         footer: {
-            rights: "© 2024 TrustReg TN Pilot Project. This is a prototype concept, not an official government portal."
+            rights: "© 2024 TrustReg TN Pilot Project. This is a prototype concept, not an official government portal.",
+            disclaimer_banner: "UNOFFICIAL DEMO PROJECT - NOT AN OFFICIAL GOVT SERVICE",
+            disclaimer: "DISCLAIMER: This is an enterprise research platform part of the TN-MBNR TrustReg TN Pilot. This is NOT an official service of the Government of Tamil Nadu."
         },
         tech_stack: {
             title: "Technical Architecture",
@@ -506,7 +508,9 @@ export const translations = {
             }
         },
         footer: {
-            rights: "© 2024 TrustReg TN முன்னோடித் திட்டம். இது ஒரு முன்மாதிரி கருத்துரு மட்டுமே."
+            rights: "© 2024 TrustReg TN முன்னோடித் திட்டம். இது ஒரு முன்மாதிரி கருத்துரு மட்டுமே.",
+            disclaimer_banner: "அதிகாரப்பூர்வமற்ற டெமோ திட்டம் - அரசு சேவை அல்ல",
+            disclaimer: "பொறுப்புத் துறப்பு: இது TN-MBNR TrustReg TN பைலட்டின் ஒரு பகுதியான நிறுவன ஆராய்ச்சி தளம். இது தமிழ்நாடு அரசின் அதிகாரப்பூர்வ சேவை அல்ல."
         },
         tech_stack: {
             title: "தொழில்நுட்ப கட்டமைப்பு",
@@ -617,6 +621,12 @@ export const translations = {
                 title: "மூலோபாய எச்சரிக்கைகள்",
                 global_map: "உலகளாவிய அபாய வரைபடம்"
             }
+        },
+        voice: {
+            placeholder: "குரல் அல்லது கட்டளை மூலம் தேடவும்...",
+            listening: "அமைப்பு கேட்கிறது...",
+            captured: "பேச்சு கைப்பற்றப்பட்டது",
+            error: "பேச்சு பிழை"
         }
     }
 };

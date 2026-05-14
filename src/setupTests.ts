@@ -22,6 +22,7 @@ if (typeof window !== 'undefined') {
   });
 
   // Mock Speech Recognition
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).webkitSpeechRecognition = vi.fn().mockImplementation(() => ({
     start: vi.fn(),
     stop: vi.fn(),
@@ -58,5 +59,6 @@ if (typeof navigator !== 'undefined') {
 
 // Mock ScrollTo
 if (typeof window !== 'undefined') {
-  window.scrollTo = vi.fn();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  window.scrollTo = vi.fn() as any;
 }

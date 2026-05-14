@@ -47,7 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ businesses, reports, onUpd
     const [isLedgerOpen, setIsLedgerOpen] = useState(false);
     const [ledgerAssetId, setLedgerAssetId] = useState<string | undefined>(undefined);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [fullLedger, setFullLedger] = useState<Record<string, unknown>[]>([]);
+    const [fullLedger, setFullLedger] = useState<any[]>([]);
     
     // Notification Demo State
     const [testRecipient, setTestRecipient] = useState('');
@@ -66,7 +66,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ businesses, reports, onUpd
                 const approvalsRes = await api.get<{ data: Business[] }>('/admin/pending-approvals');
                 setPendingApprovals(approvalsRes.data);
 
-                const ledgerRes = await api.get<{ data: Record<string, unknown>[] }>('/ledger');
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const ledgerRes = await api.get<{ data: any[] }>('/ledger');
                 setFullLedger(ledgerRes.data);
             } catch (err) {
                 console.error("Failed to fetch admin stats:", err);

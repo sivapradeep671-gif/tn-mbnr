@@ -9,7 +9,7 @@ export interface Tenant {
     modules: string[];
 }
 
-const TENANTS: Tenant[] = [
+const TENANTS_INIT: Tenant[] = [
     {
         id: 'tn-chennai',
         name: 'Greater Chennai Corporation',
@@ -40,20 +40,38 @@ interface SaaSContextType {
     currentTenant: Tenant;
     setTenant: (id: string) => void;
     tenants: Tenant[];
+    toggleModule: (moduleId: string) => void;
 }
 
 const SaaSContext = createContext<SaaSContextType | undefined>(undefined);
 
 export const SaaSProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [currentTenant, setCurrentTenant] = useState<Tenant>(TENANTS[0]);
+    const [tenants, setTenants] = useState<Tenant[]>(TENANTS_INIT);
+    const [currentTenantId, setCurrentTenantId] = useState<string>(TENANTS_INIT[0].id);
+
+    const currentTenant = tenants.find(t => t.id === currentTenantId) || tenants[0];
 
     const setTenant = (id: string) => {
-        const tenant = TENANTS.find(t => t.id === id);
-        if (tenant) setCurrentTenant(tenant);
+        setCurrentTenantId(id);
+    };
+
+    const toggleModule = (moduleId: string) => {
+        setTenants(prev => prev.map(t => {
+            if (t.id === currentTenantId) {
+                const hasModule = t.modules.includes(moduleId);
+                return {
+                    ...t,
+                    modules: hasModule 
+                        ? t.modules.filter(m => m !== moduleId) 
+                        : [...t.modules, moduleId]
+                };
+            }
+            return t;
+        }));
     };
 
     return (
-        <SaaSContext.Provider value={{ currentTenant, setTenant, tenants: TENANTS }}>
+        <SaaSContext.Provider value={{ currentTenant, setTenant, tenants, toggleModule }}>
             {children}
         </SaaSContext.Provider>
     );

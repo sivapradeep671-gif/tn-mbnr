@@ -3,7 +3,7 @@ import { Bot, Send, Minimize2, MessageSquare, Loader2 } from 'lucide-react';
 import { aiService } from '../../services/geminiService';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const AIAssistant: React.FC = () => {
+const AIAssistant: React.FC = () => {
     const { language } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
@@ -104,7 +104,7 @@ export const AIAssistant: React.FC = () => {
                             <input 
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 placeholder={isTamil ? 'உங்கள் கேள்வியை இங்கே கேட்கவும்...' : "Quantum query here..."}
                                 className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-xs focus:ring-2 focus:ring-yellow-500/20 outline-none transition-all"
                             />
@@ -131,3 +131,5 @@ export const AIAssistant: React.FC = () => {
         </div>
     );
 };
+
+export default AIAssistant;
