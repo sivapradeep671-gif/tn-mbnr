@@ -85,6 +85,18 @@ export const CitizenRegistration: React.FC<CitizenRegistrationProps> = ({ onComp
                                 />
                             </div>
 
+                            <div className="flex items-start gap-3 mt-4 mb-6 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                                <input 
+                                    type="checkbox" 
+                                    id="dpdp-consent" 
+                                    required 
+                                    className="mt-1 w-4 h-4 bg-white/5 border-white/20 rounded text-blue-500 focus:ring-blue-500/50 accent-blue-500 cursor-pointer"
+                                />
+                                <label htmlFor="dpdp-consent" className="text-[11px] text-slate-300 leading-relaxed cursor-pointer">
+                                    I provide explicit consent under the <strong>DPDP Act 2023</strong> for TN-MBNR to fetch and temporarily process my identity from DigiLocker/UIDAI for verification purposes only. I understand I can revoke this consent at any time.
+                                </label>
+                            </div>
+
                             <button
                                 type="submit"
                                 disabled={submitting}

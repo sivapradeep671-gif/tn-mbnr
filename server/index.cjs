@@ -1062,6 +1062,35 @@ app.post('/api/notify-email', apiLimiter, async (req, res) => {
     }
 });
 
+// --- DPDP Act Compliance (Right to Revoke) ---
+const AadhaarVault = require('./utils/aadhaarVault.cjs');
+
+app.post('/api/citizen/revoke-consent', apiLimiter, async (req, res) => {
+    const { reference_token } = req.body;
+    
+    if (!reference_token) {
+        return res.status(400).json({ error: 'Aadhaar reference token required for consent revocation' });
+    }
+
+    try {
+        // Purge the PII from the Aadhaar Data Vault (ADV)
+        await AadhaarVault.purge(reference_token);
+
+        logger.info('DPDP Consent Revoked', { 
+            event: 'consent_revocation',
+            timestamp: new Date().toISOString(),
+            reference_token: reference_token 
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Under the DPDP Act 2023, your consent has been revoked. All cached identity data has been permanently purged from the vault.' 
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to purge data from vault.' });
+    }
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     logger.error('Unhandled Exception', {
