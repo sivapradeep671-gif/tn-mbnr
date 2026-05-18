@@ -1011,11 +1011,6 @@ app.get('/api/v1/verify/:businessId', (req, res) => {
 app.use(express.static(path.join(__dirname, '../dist')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// SPA Catch-all (using app.use for Express 5 compatibility)
-app.use((req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
 // --- Notification Nodes ---
 
 app.post('/api/notify-sms', apiLimiter, async (req, res) => {
@@ -1089,6 +1084,11 @@ app.post('/api/citizen/revoke-consent', apiLimiter, async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to purge data from vault.' });
     }
+});
+
+// SPA Catch-all (using app.use for Express 5 compatibility)
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Global Error Handler
