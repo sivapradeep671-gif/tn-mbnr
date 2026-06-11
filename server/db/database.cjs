@@ -2,9 +2,19 @@ const knex = require('knex');
 const path = require('path');
 const logger = require('../utils/logger.cjs');
 
+const dbClient = process.env.DB_CLIENT || 'sqlite3';
 const dbPath = process.env.DB_PATH || path.join(__dirname, '../tn_mbnr_production.db');
 
-const db = knex({
+const knexConfig = dbClient === 'pg' ? {
+    client: 'pg',
+    connection: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        database: process.env.DB_NAME || 'tn_mbnr'
+    },
+    pool: { min: 2, max: 10 }
+} : {
     client: 'sqlite3',
     connection: {
         filename: dbPath
@@ -15,7 +25,15 @@ const db = knex({
             conn.run('PRAGMA foreign_keys = ON', cb);
         }
     }
-});
+};
+
+const db = knex(knexConfig);
+
+if (dbClient === 'pg') {
+    logger.info("PostgreSQL High-Load Engine Initialized.");
+} else {
+    logger.info("PostgreSQL not detected. Falling back to SQLite Engine.");
+}
 
 const initializeDatabase = async () => {
     try {
@@ -23,11 +41,14 @@ const initializeDatabase = async () => {
         if (!hasMerchants) {
             await db.schema.createTable('merchants', (table) => {
                 table.string('id').primary(); // e.g., BIZ-123456
+                table.string('tenant_id').notNullable().defaultTo('tn-chennai'); // SaaS tenant separation
                 table.string('trade_name').notNullable();
                 table.string('legal_name');
                 table.string('gst_number');
                 table.string('business_category');
                 table.string('address_proof_url');
+                table.float('latitude');
+                table.float('longitude');
                 table.timestamps(true, true);
             });
             logger.info("Table 'merchants' created.");

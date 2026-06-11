@@ -1,0 +1,2 @@
+merchant_id,trade_name,legal_name,business_category,license_status,qr_uuid,registration_timestamp,license_valid_till
+BIZ-CP1M1U,Test Shop Pvt Ltd,Test Shop Pvt Ltd,Retail,BLOCKED,abb0400e-f238-40b9-bba7-10c53476bbcf,2026-04-12T14:09:26.809Z,2026-04-12T14:39:26.809Z

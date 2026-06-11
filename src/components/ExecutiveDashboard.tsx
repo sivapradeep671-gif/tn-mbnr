@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
     Users, 
     ShieldAlert, 
@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import type { Business, CitizenReport } from '../types/types';
+import { CommunicationsHub } from './CommunicationsHub';
+import { aiService } from '../services/geminiService';
+import { Loader2 } from 'lucide-react';
 
 interface ExecutiveDashboardProps {
     businesses: Business[];
@@ -21,6 +24,23 @@ interface ExecutiveDashboardProps {
 
 export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ businesses }) => {
     const { t, language } = useLanguage();
+    const [aiInsights, setAiInsights] = useState<{yieldOpportunity: string, riskAdvisory: string} | null>(null);
+    const [isAILoading, setIsAILoading] = useState(false);
+
+    useEffect(() => {
+        const fetchInsights = async () => {
+            setIsAILoading(true);
+            try {
+                const insights = await aiService.getStrategicAdvice(businesses);
+                setAiInsights(insights);
+            } catch (error) {
+                console.error("Failed to fetch strategic insights", error);
+            } finally {
+                setIsAILoading(false);
+            }
+        };
+        fetchInsights();
+    }, [businesses]);
 
     // Dynamic KPI Calculation
     const stats = useMemo(() => {
@@ -249,9 +269,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ business
                                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{language === 'ta' ? 'வளர்ச்சி வாய்ப்பு' : 'Yield Opportunity'}</span>
                                         </div>
                                         <p className="text-sm text-slate-400 leading-relaxed italic">
-                                            {language === 'ta' 
-                                                ? '"Ward 15-ல் வணிகச் செயல்பாடுகள் 12% அதிகரித்துள்ளன. கூடுதல் வருவாய் வசூலுக்கு இதுவே சரியான தருணம்."' 
-                                                : '"Ward 15 has shown a 12% surge in industrial activity. High probability for exponential Professional Tax yield if audits are accelerated."'}
+                                            {isAILoading ? (
+                                                <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin text-green-500"/> Processing Yield Matrix...</span>
+                                            ) : (
+                                                `"${aiInsights?.yieldOpportunity || (language === 'ta' ? 'தரவு காத்திருக்கிறது...' : 'Awaiting data...')}"`
+                                            )}
                                         </p>
                                     </div>
 
@@ -261,9 +283,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ business
                                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{language === 'ta' ? 'அபாய எச்சரிக்கை' : 'Risk Advisory'}</span>
                                         </div>
                                         <p className="text-sm text-slate-400 leading-relaxed italic">
-                                            {language === 'ta' 
-                                                ? '"Ward 04-ல் உள்ள 18 கடைகள் போலி பெயர்களை பயன்படுத்த வாய்ப்புள்ளது. AI தணிக்கை அவசரமாகத் தேவை."' 
-                                                : '"Cognitive engine detected high label-mimicry patterns in Ward 04 clusters. Recommend deployment of forensic inspectors for deep-logo audits."'}
+                                            {isAILoading ? (
+                                                <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin text-red-500"/> Triaging Risk Vectors...</span>
+                                            ) : (
+                                                `"${aiInsights?.riskAdvisory || (language === 'ta' ? 'தரவு காத்திருக்கிறது...' : 'Awaiting data...')}"`
+                                            )}
                                         </p>
                                     </div>
                                 </div>
@@ -280,6 +304,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ business
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Communications Hub (Phase 4) */}
+            <div className="mt-12 relative z-10">
+                <CommunicationsHub businesses={businesses} />
             </div>
 
             {/* Strategic Impact Dimensions */}

@@ -5,6 +5,7 @@ import { Camera, MapPin, Send, AlertTriangle, Shield, CheckCircle, Activity, Zap
 import { showToast } from '../hooks/useToast';
 import { notificationService } from '../services/notificationService';
 import { aiService } from '../services/geminiService';
+import { CitizenRewards } from './CitizenRewards';
 
 interface CitizenReportProps {
     prefillName?: string;
@@ -108,7 +109,10 @@ export const CitizenReport: React.FC<CitizenReportProps> = ({ prefillName = "" }
     }
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
+        <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12 space-y-8">
+            {/* Phase 7: Citizen Tokenomics Integration */}
+            <CitizenRewards />
+
             <div className="bg-slate-900 rounded-3xl border border-slate-800 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                     <AlertTriangle className="h-64 w-64 text-red-500" />

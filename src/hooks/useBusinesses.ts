@@ -4,8 +4,10 @@ import { api } from '../api/client';
 import { useOfflineSync } from './useOfflineSync';
 import type { BusinessListResponse, BusinessSingleResponse } from '../types/api';
 import { showToast } from './useToast';
+import { useSaaS } from '../context/SaaSContext';
 
 export const useBusinesses = () => {
+    const { currentTenant } = useSaaS();
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [reports, setReports] = useState<CitizenReport[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +21,7 @@ export const useBusinesses = () => {
         setError(null);
         try {
             const [bizRes, reportsRes] = await Promise.all([
-                api.get<BusinessListResponse>('/businesses'),
+                api.get<BusinessListResponse>(`/v1/license/registry?tenant_id=${currentTenant.id}`),
                 api.get<{ data: CitizenReport[] }>('/reports')
             ]);
             
@@ -74,7 +76,7 @@ export const useBusinesses = () => {
 
     useEffect(() => {
         fetchAll();
-    }, [fetchAll]);
+    }, [fetchAll, currentTenant.id]);
 
     const registerBusiness = async (business: Business) => {
         if (!isOnline) {
@@ -86,7 +88,9 @@ export const useBusinesses = () => {
         }
 
         try {
-            const response = await api.post<BusinessSingleResponse>('/businesses', business);
+            const payload = { ...business, tenant_id: currentTenant.id };
+            // Note: Currently pointing to v1/license/register
+            const response = await api.post<BusinessSingleResponse>('/v1/license/register', payload);
             const newBusiness = response.data || business;
             
             stateVersionRef.current++;

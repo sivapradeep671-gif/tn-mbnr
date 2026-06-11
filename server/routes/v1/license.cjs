@@ -2,9 +2,27 @@ const express = require('express');
 const crypto = require('crypto');
 const { db } = require('../../db/database.cjs');
 const LicenseService = require('../../services/LicenseService.cjs');
+const { apiCache, invalidateCache } = require('../../utils/cache.cjs');
 const logger = require('../../utils/logger.cjs');
 
 const router = express.Router();
+
+// Haversine formula in meters
+function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+    const R = 6371e3; // metres
+    const f1 = lat1 * Math.PI/180;
+    const f2 = lat2 * Math.PI/180;
+    const df = (lat2-lat1) * Math.PI/180;
+    const dl = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(df/2) * Math.sin(df/2) +
+            Math.cos(f1) * Math.cos(f2) *
+            Math.sin(dl/2) * Math.sin(dl/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+}
 
 // Mock Gemini AI integration hook
 const verifyWithGemini = async (tradeName) => {
@@ -25,7 +43,9 @@ const verifyWithGemini = async (tradeName) => {
  * Captures business data, sets up the QR token, evaluates timestamps, and records to DB.
  */
 router.post('/register', async (req, res) => {
-    const { trade_name, legal_name, gst_number, business_category, address_proof_url } = req.body;
+    const { trade_name, legal_name, gst_number, business_category, address_proof_url, latitude, longitude, tenant_id } = req.body;
+    
+    const activeTenant = tenant_id || 'tn-chennai';
     
     if (!trade_name) return res.status(400).json({ error: "Missing trade_name" });
 
@@ -46,11 +66,14 @@ router.post('/register', async (req, res) => {
             // Insert Merchant
             await trx('merchants').insert({
                 id: merchant_id,
+                tenant_id: activeTenant,
                 trade_name,
                 legal_name: legal_name || trade_name,
                 gst_number: gst_number || null,
                 business_category: business_category || 'General',
                 address_proof_url: address_proof_url || null,
+                latitude: latitude || null,
+                longitude: longitude || null,
                 created_at: nowISO,
                 updated_at: nowISO
             });
@@ -80,6 +103,9 @@ router.post('/register', async (req, res) => {
             status: initialStatus,
             timestamps
         });
+
+        // Invalidate Registry Cache for this tenant
+        invalidateCache('/registry');
     } catch (err) {
         logger.error("Registration failed", { error: err.message });
         res.status(500).json({ error: "Database transaction failed" });
@@ -90,9 +116,9 @@ router.post('/register', async (req, res) => {
  * GET /api/v1/verify/:qr_uuid
  * Dynamic status lookup endpoint with zero client-side state dependency.
  */
-router.get('/verify/:qr_uuid', async (req, res) => {
+router.get('/verify/:qr_uuid', apiCache(60), async (req, res) => {
     const { qr_uuid } = req.params;
-    const { lat, lng } = req.query;
+    const { lat, lng, tenant_id } = req.query;
     
     // Determine scanner role from standard auth or custom header
     const scannerRole = req.headers['x-scanner-role'] === 'inspector' ? 'inspector' : 'citizen';
@@ -120,21 +146,38 @@ router.get('/verify/:qr_uuid', async (req, res) => {
                 message_ta: "இந்த QR குறியீடு எந்தவொரு செல்லுபடியான நகராட்சி பதிவுடனும் பொருந்தவில்லை."
             });
         }
-
         const merchant = await db('merchants').where({ id: licenseRecord.merchant_id }).first();
+        
+        // Tenant boundary check
+        if (tenant_id && merchant.tenant_id !== tenant_id) {
+            return res.status(404).json({
+                status: "COUNTERFEIT",
+                message_en: "This QR code belongs to a different municipal zone.",
+                message_ta: "இந்த QR குறியீடு வேறு ஒரு நகராட்சி மண்டலத்தைச் சேர்ந்தது."
+            });
+        }
 
         // Pass through deterministic state machine
         const finalLicenseState = await LicenseService.evaluateDynamicState(licenseRecord);
 
-        // Geolocation Check Logic (Stubbed for prototype)
-        // In reality, compare lat/lng against merchant coordinates
-        const isLocationMismatch = false; 
+        // Geolocation Check Logic (200m Geofence)
+        let isLocationMismatch = false; 
+        if (lat && lng && merchant.latitude && merchant.longitude) {
+            const distance = getDistanceInMeters(parseFloat(lat), parseFloat(lng), merchant.latitude, merchant.longitude);
+            if (distance !== null && distance > 200) {
+                isLocationMismatch = true;
+            }
+        }
 
         let finalOutcome = finalLicenseState.status;
         let msgEn = "Business successfully verified.";
         let msgTa = "வணிகம் வெற்றிகரமாக சரிபார்க்கப்பட்டது.";
 
-        if (finalOutcome === 'GRACE') {
+        if (isLocationMismatch) {
+            finalOutcome = 'GEOFENCE_BREACH';
+            msgEn = "WARNING: Scan originated outside the 200m geofenced perimeter. Potential counterfeit QR detected.";
+            msgTa = "எச்சரிக்கை: ஸ்கேன் 200மீ சுற்றளவுக்கு வெளியே இருந்து வந்தது. சாத்தியமான போலி QR கண்டறியப்பட்டது.";
+        } else if (finalOutcome === 'GRACE') {
             msgEn = "Warning: Business is currently in the 30-minute grace period.";
             msgTa = "எச்சரிக்கை: வணிகம் தற்போது 30 நிமிட சலுகை காலத்தில் உள்ளது.";
         } else if (finalOutcome === 'EXPIRED') {
@@ -264,6 +307,47 @@ router.get('/admin/logs', async (req, res) => {
         res.json({ logs });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch logs" });
+    }
+});
+
+/**
+ * GET /api/v1/license/registry
+ * Fetches all businesses from the SQLite engine for the GIS Map Explorer.
+ */
+router.get('/registry', apiCache(300), async (req, res) => {
+    try {
+        const { tenant_id } = req.query;
+        let query = db('merchants').select('*');
+        if (tenant_id) {
+            query = query.where({ tenant_id });
+        }
+        const merchants = await query;
+        const licenses = await db('licenses').select('*');
+        
+        // Join the data for the frontend MapExplorer
+        const registry = merchants.map(m => {
+            const license = licenses.find(l => l.merchant_id === m.id);
+            return {
+                id: m.id,
+                tradeName: m.trade_name,
+                legalName: m.legal_name,
+                type: m.business_category,
+                category: m.business_category,
+                status: license?.status === 'ACTIVE' ? 'Verified' : 'Pending', // Map SQLite state to UI expected state
+                latitude: m.latitude,
+                longitude: m.longitude,
+                address: `TN-MBNR Registered Address for ${m.trade_name}`,
+                registrationDate: m.created_at,
+                license_status: license?.status,
+                license_valid_till: license?.license_valid_till,
+                riskScore: license?.status === 'BLOCKED' ? 95 : (license?.status === 'EXPIRED' ? 80 : 0)
+            };
+        });
+
+        res.json({ data: registry });
+    } catch (err) {
+        logger.error("Registry fetch failed", { error: err.message });
+        res.status(500).json({ error: "Failed to fetch registry" });
     }
 });
 

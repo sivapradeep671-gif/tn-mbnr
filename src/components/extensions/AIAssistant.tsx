@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Minimize2, MessageSquare, Loader2 } from 'lucide-react';
+import { Bot, Send, Minimize2, MessageSquare, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { aiService } from '../../services/geminiService';
 import { useLanguage } from '../../context/LanguageContext';
+import { VoiceInput } from '../VoiceInput';
 
 const AIAssistant: React.FC = () => {
     const { language } = useLanguage();
@@ -9,9 +10,18 @@ const AIAssistant: React.FC = () => {
     const [isThinking, setIsThinking] = useState(false);
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<{ role: 'user' | 'model'; parts: { text: string }[] }[]>([]);
+    const [isMuted, setIsMuted] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const isTamil = language === 'ta';
+
+    const speak = (text: string) => {
+        if (isMuted || typeof window === 'undefined' || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = isTamil ? 'ta-IN' : 'en-US';
+        window.speechSynthesis.speak(utterance);
+    };
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -30,8 +40,11 @@ const AIAssistant: React.FC = () => {
         try {
             const response = await aiService.getChatResponse(input, messages);
             setMessages(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
+            speak(response);
         } catch {
-            setMessages(prev => [...prev, { role: 'model', parts: [{ text: "System node failure. Reconnecting..." }] }]);
+            const errStr = "System node failure. Reconnecting...";
+            setMessages(prev => [...prev, { role: 'model', parts: [{ text: errStr }] }]);
+            speak(errStr);
         } finally {
             setIsThinking(false);
         }
@@ -56,6 +69,12 @@ const AIAssistant: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            <button onClick={() => {
+                                setIsMuted(!isMuted);
+                                window.speechSynthesis?.cancel();
+                            }} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors" title={isMuted ? "Unmute TTS" : "Mute TTS"}>
+                                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 text-yellow-500" />}
+                            </button>
                             <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
                                 <Minimize2 className="h-4 w-4" />
                             </button>
@@ -100,17 +119,20 @@ const AIAssistant: React.FC = () => {
 
                     {/* Footer */}
                     <div className="p-6 bg-slate-950 border-t border-white/5">
-                        <div className="relative">
+                        <div className="relative flex items-center">
+                            <div className="absolute left-2 z-10">
+                                <VoiceInput onResult={(text) => setInput(text)} />
+                            </div>
                             <input 
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 placeholder={isTamil ? 'உங்கள் கேள்வியை இங்கே கேட்கவும்...' : "Quantum query here..."}
-                                className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-xs focus:ring-2 focus:ring-yellow-500/20 outline-none transition-all"
+                                className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 pl-12 pr-12 text-xs focus:ring-2 focus:ring-yellow-500/20 outline-none transition-all"
                             />
                             <button 
                                 onClick={handleSend}
-                                className="absolute right-2 top-1.5 p-1.5 bg-yellow-500 text-slate-950 rounded-lg hover:scale-105 active:scale-95 transition-all"
+                                className="absolute right-2 p-1.5 bg-yellow-500 text-slate-950 rounded-lg hover:scale-105 active:scale-95 transition-all z-10"
                             >
                                 <Send className="h-4 w-4" />
                             </button>

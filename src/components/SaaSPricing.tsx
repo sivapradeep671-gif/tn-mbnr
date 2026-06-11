@@ -4,7 +4,7 @@ import { Check, Shield, Building, Building2, Crown } from 'lucide-react';
 const PLANS = [
     {
         name: 'Township',
-        price: '$499',
+        price: '₹39,999',
         period: '/mo',
         description: 'Ideal for small municipalities and local wards.',
         icon: Building,
@@ -21,7 +21,7 @@ const PLANS = [
     },
     {
         name: 'Smart City',
-        price: '$1,999',
+        price: '₹1,49,999',
         period: '/mo',
         description: 'Advanced features for large urban centers.',
         icon: Building2,
