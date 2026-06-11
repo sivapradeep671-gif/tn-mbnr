@@ -10,8 +10,10 @@ import { ThemeProvider } from './context/ThemeContext';
 import { useBusinesses } from './hooks/useBusinesses';
 import { ToastContainer } from './components/Toast';
 import { api } from './api/client';
-import { Mail, Shield, Zap, AlertTriangle } from 'lucide-react';
+import { Mail, Shield, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useLanguage } from './context/LanguageContext';
+import { APP_VERSION } from './constants';
+import { config } from './config';
 import type { GlobalHandlers } from './types/types';
 import { SaaSProvider, useSaaS } from './context/SaaSContext';
 import { AccessibilityToolbar } from './components/AccessibilityToolbar';
@@ -94,20 +96,25 @@ function AppContent() {
   const [reportPrefill, setReportPrefill] = useState<string>('');
   const [isBackendOffline, setIsBackendOffline] = useState(false);
 
-  // Health check for backend
-  useEffect(() => {
-    const checkBackend = async () => {
-      const isOnline = await api.checkHealth();
-      if (!isOnline) {
-        if (import.meta.env.DEV) {
-            console.warn('Security Advisory: API Grid Offline — Operating on Local Node Fallback');
+    // Health check for backend
+    useEffect(() => {
+        if (config.env === 'production') {
+            // In Sandbox mode, we don't care about backend health
+            setIsBackendOffline(true);
+            return;
         }
-        // Use queueMicrotask to avoid synchronous setState in effect
-        queueMicrotask(() => setIsBackendOffline(true));
-      }
-    };
-    checkBackend();
-  }, []);
+        
+        const checkBackend = async () => {
+            const isOnline = await api.checkHealth();
+            if (!isOnline) {
+                if (import.meta.env.DEV) {
+                    console.warn('Security Advisory: API Grid Offline — Operating on Local Node Fallback');
+                }
+                queueMicrotask(() => setIsBackendOffline(true));
+            }
+        };
+        checkBackend();
+    }, []);
 
   // Strict View protection & Role-based routing
   useEffect(() => {
@@ -246,9 +253,14 @@ function AppContent() {
         <div className="w-full bg-yellow-500/95 text-slate-900 text-[9px] font-black py-1.5 px-4 text-center tracking-[0.3em] uppercase border-b border-yellow-600/20">
           ⚠️ PROTOTYPE DEMONSTRATION | {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
-        {isBackendOffline && (
+        {isBackendOffline && config.env !== 'production' && (
           <div className="w-full bg-red-500/95 text-white text-[10px] font-black py-2 px-4 text-center tracking-[0.2em] uppercase border-b border-red-600/20 shadow-lg animate-pulse">
             🚨 Render Server is Booting Up (Free Tier Sleep). Please wait 50 seconds and refresh the page.
+          </div>
+        )}
+        {config.env === 'production' && (
+          <div className="w-full bg-emerald-500/95 text-white text-[10px] font-black py-2 px-4 text-center tracking-[0.2em] uppercase border-b border-emerald-600/20 shadow-lg">
+            ⚡ PERMANENT SANDBOX MODE ACTIVE — Running locally for maximum demonstration speed.
           </div>
         )}
       </div>

@@ -5,6 +5,7 @@ import { useOfflineSync } from './useOfflineSync';
 import type { BusinessListResponse, BusinessSingleResponse } from '../types/api';
 import { showToast } from './useToast';
 import { useSaaS } from '../context/SaaSContext';
+import { config } from '../config';
 
 export const useBusinesses = () => {
     const { currentTenant } = useSaaS();
@@ -20,6 +21,10 @@ export const useBusinesses = () => {
         setIsLoading(true);
         setError(null);
         try {
+            if (config.env === 'production') {
+                throw new Error('Sandbox Mode Active: Bypassing Backend API');
+            }
+
             const [bizRes, reportsRes] = await Promise.all([
                 api.get<BusinessListResponse>(`/v1/license/registry?tenant_id=${currentTenant.id}`),
                 api.get<{ data: CitizenReport[] }>('/reports')
