@@ -246,6 +246,11 @@ function AppContent() {
         <div className="w-full bg-yellow-500/95 text-slate-900 text-[9px] font-black py-1.5 px-4 text-center tracking-[0.3em] uppercase border-b border-yellow-600/20">
           ⚠️ PROTOTYPE DEMONSTRATION | {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
+        {isBackendOffline && (
+          <div className="w-full bg-red-500/95 text-white text-[10px] font-black py-2 px-4 text-center tracking-[0.2em] uppercase border-b border-red-600/20 shadow-lg animate-pulse">
+            🚨 Render Server is Booting Up (Free Tier Sleep). Please wait 50 seconds and refresh the page.
+          </div>
+        )}
       </div>
 
       <Navbar currentView={currentView} setCurrentView={setCurrentView} />
