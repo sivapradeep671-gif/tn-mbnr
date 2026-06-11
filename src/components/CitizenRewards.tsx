@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Award, Zap, Shield, ChevronRight, TrendingUp } from 'lucide-react';
+import { GlobalLeaderboard } from './GlobalLeaderboard';
 
 export const CitizenRewards: React.FC = () => {
     // Mock user points for the tokenomics demo
     const xp = 850;
     const nextTierXp = 1000;
     const progress = (xp / nextTierXp) * 100;
+    
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
 
     return (
         <div className="glass-card p-6 sm:p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group">
@@ -73,11 +76,16 @@ export const CitizenRewards: React.FC = () => {
                     </div>
                 </div>
 
-                <button className="mt-8 w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2">
+                <button 
+                    onClick={() => setShowLeaderboard(true)}
+                    className="mt-8 w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2"
+                >
                     <TrendingUp className="h-4 w-4" />
                     View Global Leaderboard
                 </button>
             </div>
+
+            {showLeaderboard && <GlobalLeaderboard onClose={() => setShowLeaderboard(false)} />}
         </div>
     );
 };
