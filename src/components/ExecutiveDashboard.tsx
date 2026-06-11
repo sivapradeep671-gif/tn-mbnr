@@ -16,6 +16,8 @@ import type { Business, CitizenReport } from '../types/types';
 import { CommunicationsHub } from './CommunicationsHub';
 import { aiService } from '../services/geminiService';
 import { Loader2 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ExecutiveDashboardProps {
     businesses: Business[];
@@ -37,10 +39,42 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ business
                 console.error("Failed to fetch strategic insights", error);
             } finally {
                 setIsAILoading(false);
-            }
         };
         fetchInsights();
     }, [businesses]);
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(20);
+        doc.text("Executive Audit Report", 14, 22);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+        doc.text(`Total Businesses: ${businesses.length}`, 14, 36);
+
+        // Registry Table
+        const tableColumn = ["ID", "Trade Name", "Category", "Status", "Ward", "Risk Score"];
+        const tableRows = businesses.map(b => [
+            b.id,
+            b.tradeName,
+            b.category,
+            b.status || b.current_stage || 'Unknown',
+            b.municipal_ward || 'N/A',
+            (b.riskScore || 0).toString()
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 45,
+            styles: { fontSize: 8, cellPadding: 3 },
+            headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+        });
+
+        doc.save("TN_MBNR_Executive_Audit_Report.pdf");
+    };
 
     // Dynamic KPI Calculation
     const stats = useMemo(() => {
@@ -149,7 +183,10 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ business
                 </div>
                 
                 <div className="flex gap-4">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/10 transition-all group">
+                    <button 
+                        onClick={handleExportPDF}
+                        className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/10 transition-all group"
+                    >
                         <Download className="h-4 w-4 group-hover:translate-y-0.5 transition-transform" /> Export Report
                     </button>
                     <button className="flex items-center gap-2 px-6 py-3 bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-2xl shadow-indigo-500/40 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all">

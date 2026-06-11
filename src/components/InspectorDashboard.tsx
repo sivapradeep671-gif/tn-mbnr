@@ -27,7 +27,8 @@ import { FieldAuditSimulator } from './FieldAuditSimulator';
 import { VoiceInput } from './VoiceInput';
 import { announceStatus } from '../utils/voiceUtils';
 import { exportToCSV } from '../utils/export';
-
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 interface InspectorDashboardProps {
     businesses: Business[];
     onUpdateStatus: (id: string, status: 'Verified' | 'Rejected', hash?: string) => Promise<void>;
@@ -157,11 +158,38 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ business
 
                 <div className="flex items-center gap-6">
                     <button 
-                        onClick={() => exportToCSV(businesses, 'inspector_registry_export')}
+                        onClick={() => {
+                            const doc = new jsPDF();
+                            doc.setFontSize(20);
+                            doc.text("Field Inspector Registry Report", 14, 22);
+                            doc.setFontSize(10);
+                            doc.setTextColor(100);
+                            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+                            doc.text(`Assigned Zone: Central Hub`, 14, 36);
+
+                            const tableColumn = ["Shop ID", "Trade Name", "Status", "GPS Location", "Risk"];
+                            const tableRows = businesses.map(b => [
+                                b.id,
+                                b.tradeName,
+                                b.status || b.current_stage || 'PENDING',
+                                `${b.latitude}, ${b.longitude}`,
+                                (b.riskScore || 0) > 70 ? 'High' : 'Low'
+                            ]);
+
+                            autoTable(doc, {
+                                head: [tableColumn],
+                                body: tableRows,
+                                startY: 45,
+                                styles: { fontSize: 8 },
+                                headStyles: { fillColor: [234, 179, 8] }, // Yellow-500
+                            });
+
+                            doc.save("TN_MBNR_Inspector_Log.pdf");
+                        }}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black transition-all uppercase tracking-widest shadow-lg shadow-emerald-500/20"
                     >
                         <Download className="h-4 w-4" />
-                        Export Data
+                        Generate PDF
                     </button>
                     
                     {/* Sync Status Badge */}
