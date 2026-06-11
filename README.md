@@ -8,6 +8,10 @@
 
 **TN-MBNR (TrustReg TN)** is a high-fidelity, blockchain-enabled civic platform designed for the **Tamil Nadu Government**. It leverages Artificial Intelligence and Cryptographic Ledgers to prevent business fraud, protect small entrepreneurs, and provide citizens with a "Single Source of Truth" for commercial verification.
 
+> [!WARNING]
+> **PROTOTYPE APP**
+> Please note that this is currently a prototype/proof-of-concept application. It is meant to demonstrate the technical architecture, AI logic, and user flows of the TN-MBNR system.
+
 > [!NOTE]
 > **PROJECT POSITIONING**: The system is a working innovation prototype with active frontend-backend integration, health checks, QR verification flows, dashboards, and role-based modules. Further government integration layers, operational rollout, and department onboarding can be executed in the next phase.
 

@@ -244,7 +244,7 @@ function AppContent() {
       <div className="fixed top-0 left-0 w-full z-[60] flex flex-col">
         <AccessibilityToolbar />
         <div className="w-full bg-yellow-500/95 text-slate-900 text-[9px] font-black py-1.5 px-4 text-center tracking-[0.3em] uppercase border-b border-yellow-600/20">
-          {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
+          ⚠️ PROTOTYPE DEMONSTRATION | {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
       </div>
 
