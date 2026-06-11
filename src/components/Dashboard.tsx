@@ -580,6 +580,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ businesses, reports, onUpd
                                 </button>
                             </div>
                         </div>
+
+                        <div className="glass-card p-8 rounded-[2.5rem] bg-indigo-500/10 border-indigo-500/20 relative overflow-hidden group">
+                            <div className="relative z-10">
+                                <Database className="h-8 w-8 text-indigo-500 mb-4" />
+                                <h4 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-4">Architecture Workflow: Server-Side Status</h4>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-300">
+                                        <span>1. Static QR Printed</span>
+                                        <ShieldCheck className="h-4 w-4 text-slate-500" />
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px] font-mono text-indigo-300">
+                                        <span>2. Backend State Updates</span>
+                                        <Activity className="h-4 w-4 text-indigo-500" />
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px] font-mono text-green-300">
+                                        <span>3. Instant Scan Resolution</span>
+                                        <Zap className="h-4 w-4 text-green-500" />
+                                    </div>
+                                </div>
+                                <p className="text-slate-400 text-[9px] leading-relaxed mt-6">The printed QR code is decoupled from the live business state. When a business enters the Grace period or Payment Deadline (1 Month) state, the TN-MBNR Mainnet updates instantly. Citizens scanning the static QR will automatically fetch the real-time Server-Side Status without the business needing a new QR token.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

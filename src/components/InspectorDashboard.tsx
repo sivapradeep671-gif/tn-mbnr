@@ -59,6 +59,21 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ business
     const [aiResult, setAiResult] = useState<{ isSafe: boolean; riskLevel: string; message: string; similarBrands?: string[] } | null>(null);
     const [isSigning, setIsSigning] = useState(false);
     const [txHash, setTxHash] = useState<string | null>(null);
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+    React.useEffect(() => {
+        if (activeTab === 'AUDIT_LOG') {
+            const fetchLogs = async () => {
+                try {
+                    const res = await api.get<{logs: any[]}>('/v1/license/admin/logs');
+                    setAuditLogs(res.logs || []);
+                } catch (e) {
+                    console.error("Failed to fetch admin logs");
+                }
+            };
+            fetchLogs();
+        }
+    }, [activeTab]);
 
     const handleApprove = async () => {
         if (!selectedBusiness) return;
@@ -304,23 +319,36 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ business
 
                     {activeTab === 'AUDIT_LOG' && (
                         <div className="glass-card p-8 rounded-[2rem] bg-white/[0.02] border-white/5">
-                            <h3 className="h-display text-2xl mb-6">Action <span className="text-glow">History</span></h3>
+                            <h3 className="h-display text-2xl mb-6">Verification <span className="text-glow">Logs</span></h3>
                             <div className="space-y-6">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="flex gap-4 relative">
-                                        {i !== 3 && <div className="absolute left-6 top-12 bottom-0 w-px bg-white/5" />}
-                                        <div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center shrink-0 border border-white/5 z-10">
-                                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                        </div>
-                                        <div className="pb-8">
-                                            <p className="text-sm font-bold text-white">Application TN-8829 Verified</p>
-                                            <p className="text-xs text-slate-500 mt-1 mb-2">Authenticated via Fingerprint Auth • 2h 15m ago</p>
-                                            <div className="inline-block px-3 py-1 rounded-lg bg-white/5 text-[10px] text-slate-400 font-mono">
-                                                HASH: 0x82...f9a4
+                                {auditLogs.length === 0 ? (
+                                    <p className="text-slate-500 text-sm">No verification scans recorded yet.</p>
+                                ) : (
+                                    auditLogs.map((log, index) => (
+                                        <div key={log.id} className="flex gap-4 relative">
+                                            {index !== auditLogs.length - 1 && <div className="absolute left-6 top-12 bottom-0 w-px bg-white/5" />}
+                                            <div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center shrink-0 border border-white/5 z-10">
+                                                {log.is_counterfeit ? (
+                                                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                                                ) : (
+                                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                                )}
+                                            </div>
+                                            <div className="pb-8">
+                                                <p className="text-sm font-bold text-white">
+                                                    {log.is_counterfeit ? 'Counterfeit Scan Attempt Blocked' : `Verification Scan: ${log.verification_outcome}`}
+                                                </p>
+                                                <p className="text-xs text-slate-500 mt-1 mb-2">
+                                                    Role: {log.scanner_role} • {new Date(log.timestamp).toLocaleString()}
+                                                    {log.scan_latitude && log.scan_longitude && ` • GPS: ${log.scan_latitude.toFixed(4)}, ${log.scan_longitude.toFixed(4)}`}
+                                                </p>
+                                                <div className="inline-block px-3 py-1 rounded-lg bg-white/5 text-[10px] text-slate-400 font-mono">
+                                                    UUID: {log.qr_uuid}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </div>
                     )}

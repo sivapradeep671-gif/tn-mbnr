@@ -44,62 +44,42 @@ export const QRScanner: React.FC<QRScannerProps> = ({ businesses }) => {
             try {
                 const { latitude, longitude } = position.coords;
 
-                // --- 1. Server-Side Verification ---
+                // --- 1. V1 Production Server Verification ---
                 try {
-                    const serverResult = await api.post<ScanResult>('/verify-scan', {
-                        token: decodedText,
-                        scannerLocation: { lat: latitude, lng: longitude }
-                    });
+                    const serverResult = await api.get<any>(`/v1/license/verify/${decodedText}?lat=${latitude}&lng=${longitude}`);
 
-                    if (serverResult.status !== 'ERROR' && serverResult.status !== 'INVALID') {
-                        setScanResult(serverResult);
-                        handleScanResult(serverResult);
-                        return;
-                    }
-                } catch (serverError) {
-                    console.warn("Server verification failed, falling back to local...", serverError);
-                }
-
-                // --- 2. Fallback: Local/Mock Verification ---
-                const foundBusiness = businesses.find(b => b.id === decodedText || (b.tradeName || '').toLowerCase() === (decodedText || '').toLowerCase());
-
-                let result: ScanResult;
-                if (foundBusiness && foundBusiness.status === 'Verified') {
-                    result = {
-                        status: 'VALID',
-                        message: "Transaction Secure. Verification Token Valid.",
-                        business: {
-                            name: foundBusiness.tradeName,
-                            legalName: foundBusiness.legalName,
-                            gst: foundBusiness.gstNumber,
-                            id: foundBusiness.id,
+                    // Map the V1 engine response to the local UI ScanResult type
+                    const mappedResult: ScanResult = {
+                        status: serverResult.status,
+                        message: serverResult.message_en,
+                        verifiedAt: new Date().toISOString(),
+                        business: serverResult.merchant ? {
+                            name: serverResult.merchant.trade_name,
+                            id: serverResult.merchant.id,
                             lat: latitude,
                             lng: longitude
-                        }
+                        } : undefined
                     };
-                } else {
-                    // Dynamic mock verification
-                    result = verifyMockToken(decodedText) as ScanResult;
-                }
 
-                // 3. Look-alike Detection (Fraud Prevention)
-                if (result.status !== 'VALID') {
-                    const suspiciousMatch = businesses.find(b => {
-                        const name = (b.tradeName || '').toLowerCase();
-                        const scan = (decodedText || '').toLowerCase();
-                        return (name.substring(0, 2) === scan.substring(0, 2) &&
-                            Math.abs(name.length - scan.length) <= 2 &&
-                            scan !== name);
-                    });
-
-                    if (suspiciousMatch) {
-                        result.status = 'COUNTERFEIT';
-                        result.message = `FRAUD ALERT: Scanned name "${decodedText}" is suspiciously similar to verified business "${suspiciousMatch.tradeName}". DO NOT PAY.`;
+                    setScanResult(mappedResult);
+                    handleScanResult(mappedResult);
+                    
+                } catch (serverError: any) {
+                    // Handle 404 Counterfeit or network errors gracefully
+                    if (serverError.message && serverError.message.includes('COUNTERFEIT')) {
+                         const counterfeitResult: ScanResult = {
+                             status: 'COUNTERFEIT',
+                             message: "This QR code does not match any valid municipal record.",
+                             verifiedAt: new Date().toISOString()
+                         };
+                         setScanResult(counterfeitResult);
+                         handleScanResult(counterfeitResult);
+                    } else {
+                        const msg = "Service unavailable: " + (serverError.message || "Network Error");
+                        setError(msg);
+                        showToast(msg, 'error');
                     }
                 }
-
-                setScanResult(result);
-                handleScanResult(result);
 
             } catch {
                 const msg = "Service unavailable";
@@ -388,6 +368,22 @@ export const QRScanner: React.FC<QRScannerProps> = ({ businesses }) => {
                                         </div>
                                     </div>
                                 )}
+                                
+                                <div className="pt-4 border-t border-slate-800">
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-[10px] text-slate-500 font-mono flex items-center justify-between">
+                                            <span>SERVER SYNC:</span>
+                                            <span className="text-green-500 font-bold">TN-MBNR MAINNET</span>
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 font-mono flex items-center justify-between">
+                                            <span>VERIFIED AT:</span>
+                                            <span className="text-slate-300">{scanResult.verifiedAt ? new Date(scanResult.verifiedAt).toLocaleString() : 'N/A'}</span>
+                                        </p>
+                                    </div>
+                                    <p className="text-[9px] text-slate-600 mt-3 text-center">
+                                        Note: Status verified live against TN-MBNR Backend Servers. The QR code is static, but verification outcomes dynamically fetch the latest backend License State (Active, Grace, Expired, etc).
+                                    </p>
+                                </div>
                             </div>
                         )}
 

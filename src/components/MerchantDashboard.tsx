@@ -35,45 +35,46 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }
         setShowLicense(true);
     };
 
-    const fetchNewToken = React.useCallback(async () => {
+    const [statusData, setStatusData] = useState<any>(null);
+    const [isPaying, setIsPaying] = useState(false);
+
+    const fetchRealStatus = React.useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await api.get<{ token: string, expiresAt: number }>(`/qr-token/${business.id}`);
-            setQrToken(response.token);
-            setTimeLeft(Math.max(0, Math.floor((response.expiresAt - Date.now()) / 1000)));
+            // Using the qrToken that was assigned during V1 registration
+            const tokenToUse = business.qrToken || business.id; 
+            const response = await api.get<any>(`/v1/license/verify/${tokenToUse}?lat=${business.latitude}&lng=${business.longitude}`);
+            setStatusData(response);
+            setQrToken(tokenToUse);
         } catch {
-            console.warn("[Merchant Authority] Regional Node Unreachable. Switching to Local Peer Verification.");
-            // Offline Fallback: Generate a locally signed token
-            const offlinePayload = {
-                id: business.id,
-                lat: business.latitude,
-                lng: business.longitude,
-                name: business.tradeName,
-                exp: Date.now() + 60000, // 1 minute expiry for security
-                mode: 'OFFLINE_PEER'
-            };
-            const offlineToken = btoa(JSON.stringify({ payload: offlinePayload, signature: 'OFFLINE_SIG_' + business.id.slice(-4) }));
-            setQrToken(offlineToken);
-            setTimeLeft(60);
-            showToast('Offline Mode: Peer-to-Peer verification active', 'warning');
+            console.warn("[Merchant Authority] Backend Unreachable.");
+            showToast('Unable to fetch live status from backend', 'warning');
+            setQrToken(business.qrToken || business.id);
         } finally {
             setIsLoading(false);
         }
-    }, [business.id, business.latitude, business.longitude, business.tradeName]);
+    }, [business]);
 
     useEffect(() => {
-        fetchNewToken();
+        fetchRealStatus();
         const interval = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    fetchNewToken();
-                    return 30;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+            fetchRealStatus();
+        }, 10000); // Polling every 10s for state changes
         return () => clearInterval(interval);
-    }, [fetchNewToken]);
+    }, [fetchRealStatus]);
+
+    const handlePayment = async () => {
+        setIsPaying(true);
+        try {
+            await api.post(`/v1/license/pay/${qrToken}`, {});
+            showToast('Payment successful! Your license is now ACTIVE.', 'success');
+            await fetchRealStatus();
+        } catch (error) {
+            showToast('Payment failed. Please try again.', 'error');
+        } finally {
+            setIsPaying(false);
+        }
+    };
 
     const downloadQR = () => {
         const svg = document.getElementById('merchant-qr');
@@ -130,16 +131,72 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }
                                 <div className="space-y-6 sm:space-y-8">
                                     <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
                                         <div className="flex items-center justify-between mb-4">
-                                            <span className="text-[10px] sm:text-xs text-slate-500 font-black uppercase tracking-widest">{t.scanner.labels.status}</span>
-                                            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 text-[10px] font-black rounded-full border border-green-500/20">
-                                                <div className="w-1 h-1 bg-green-500 rounded-full animate-ping"></div>
-                                                {t.scanner.labels.gov_verified.toUpperCase()}
+                                            <span className="text-[10px] sm:text-xs text-slate-500 font-black uppercase tracking-widest">Live License State</span>
+                                            <div className={`flex items-center gap-2 px-3 py-1 text-[10px] font-black rounded-full border ${
+                                                statusData?.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                                                statusData?.status === 'GRACE' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
+                                                statusData?.status === 'PENDING_PAYMENT' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : 
+                                                'bg-red-500/10 text-red-500 border-red-500/20'
+                                            }`}>
+                                                <div className={`w-1 h-1 rounded-full animate-ping ${
+                                                    statusData?.status === 'ACTIVE' ? 'bg-green-500' : 
+                                                    statusData?.status === 'GRACE' ? 'bg-yellow-500' : 
+                                                    statusData?.status === 'PENDING_PAYMENT' ? 'bg-orange-500' : 
+                                                    'bg-red-500'
+                                                }`}></div>
+                                                {statusData?.status || 'LOADING...'}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <CheckCircle className="h-5 w-5 text-green-500" />
-                                            <span className="text-white font-bold">{t.register.success}</span>
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-3">
+                                                <CheckCircle className={`h-5 w-5 ${
+                                                    statusData?.status === 'ACTIVE' ? 'text-green-500' : 
+                                                    statusData?.status === 'GRACE' ? 'text-yellow-500' : 
+                                                    statusData?.status === 'PENDING_PAYMENT' ? 'text-orange-500' : 
+                                                    'text-red-500'
+                                                }`} />
+                                                <span className="text-white font-bold">{statusData?.message_en || 'Syncing with backend...'}</span>
+                                            </div>
+                                            
+                                            {statusData?.status === 'PENDING_PAYMENT' && (
+                                                <div className="mt-4">
+                                                    <button 
+                                                        onClick={handlePayment}
+                                                        disabled={isPaying}
+                                                        className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-black text-[12px] uppercase tracking-widest shadow-lg hover:shadow-orange-500/30 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-50"
+                                                    >
+                                                        {isPaying ? 'Processing Payment Gateway...' : 'Pay Municipal Fees Now'}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <p className="text-[10px] text-slate-400 mt-2">
+                                                <strong>How this works:</strong> Static QR, Dynamic Server Status. Your printed QR code never needs to be redownloaded. License state changes occur on the backend servers and instantly reflect on any citizen's scan.
+                                            </p>
                                         </div>
+                                    </div>
+                                    
+                                    <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-[10px] sm:text-xs text-slate-500 font-black uppercase tracking-widest">TN-MBNR Timing Rules</span>
+                                            <div className="flex items-center gap-2 px-2 py-1 bg-yellow-500/10 text-yellow-500 text-[9px] font-black rounded-full border border-yellow-500/20">
+                                                <Shield className="w-3 h-3" /> ENFORCED
+                                            </div>
+                                        </div>
+                                        <ul className="space-y-3 text-[11px] text-slate-300">
+                                            <li className="flex justify-between items-center">
+                                                <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Active Window</span>
+                                                <span className="font-mono font-bold text-white">30 Minutes</span>
+                                            </li>
+                                            <li className="flex justify-between items-center">
+                                                <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div> Grace Period (Auto-Approval)</span>
+                                                <span className="font-mono font-bold text-white">Next 30 Minutes</span>
+                                            </li>
+                                            <li className="flex justify-between items-center">
+                                                <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Payment Deadline</span>
+                                                <span className="font-mono font-bold text-white">1 Month</span>
+                                            </li>
+                                        </ul>
                                     </div>
 
                                      <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5">

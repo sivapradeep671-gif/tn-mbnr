@@ -15,6 +15,10 @@ const { validateBody } = require('./middleware/validateBody.cjs');
 const { config } = require('./config/secrets.cjs');
 const logger = require('./utils/logger.cjs');
 
+// V1 Production SQLite Engine
+const { initializeDatabase } = require('./db/database.cjs');
+const licenseRoutesV1 = require('./routes/v1/license.cjs');
+
 // Security secrets from hardened config
 const AUTH_SECRET = config.auth.secret;
 const QR_SECRET = config.qr.secret;
@@ -79,6 +83,11 @@ const tnMbnrChain = new Blockchain();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize Production SQLite Engine
+initializeDatabase().then(() => {
+    logger.info("V1 Production Engine (SQLite) Online.");
+});
 
 // Initialize Monitoring & Crash Reporting
 const monitoring = require('./utils/monitoring.cjs');
@@ -165,6 +174,9 @@ const authorizeRoles = (...roles) => {
 };
 
 // --- Endpoints ---
+
+// Mount V1 Production Engine Routes
+app.use('/api/v1/license', apiLimiter, licenseRoutesV1);
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'online', timestamp: new Date().toISOString() });

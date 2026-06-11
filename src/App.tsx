@@ -99,6 +99,9 @@ function AppContent() {
     const checkBackend = async () => {
       const isOnline = await api.checkHealth();
       if (!isOnline) {
+        if (import.meta.env.DEV) {
+            console.warn('Security Advisory: API Grid Offline — Operating on Local Node Fallback');
+        }
         // Use queueMicrotask to avoid synchronous setState in effect
         queueMicrotask(() => setIsBackendOffline(true));
       }
@@ -243,12 +246,6 @@ function AppContent() {
         <div className="w-full bg-yellow-500/95 text-slate-900 text-[9px] font-black py-1.5 px-4 text-center tracking-[0.3em] uppercase border-b border-yellow-600/20">
           {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
-
-        {isBackendOffline && (
-          <div className="w-full bg-red-600/90 text-white text-[9px] font-black py-1.5 px-4 text-center tracking-[0.2em] uppercase flex items-center justify-center gap-2 animate-pulse backdrop-blur-md border-b border-red-500/20">
-            <AlertTriangle className="h-3.5 w-3.5" /> Security Advisory: API Grid Offline — Operating on Local Node Fallback
-          </div>
-        )}
       </div>
 
       <Navbar currentView={currentView} setCurrentView={setCurrentView} />

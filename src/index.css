@@ -457,6 +457,20 @@ html.text-size-normal { font-size: 100%; }
 html.text-size-large { font-size: 110%; }
 html.text-size-xlarge { font-size: 120%; }
 
+/* LIGHT THEME USING CSS FILTERS */
+html.light-theme {
+    filter: invert(1) hue-rotate(180deg);
+    background-color: #fff;
+}
+
+html.light-theme img, 
+html.light-theme video, 
+html.light-theme svg,
+html.light-theme .ignore-invert {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* HIGH CONTRAST (Standard Government Format) */
 html.high-contrast {
     filter: contrast(1.2) grayscale(0.1);
 }

@@ -501,13 +501,20 @@ export const BusinessRegistration: React.FC<BusinessRegistrationProps> = ({ onRe
                 riskScore: 10,
             };
 
-            // Attempt Real Backend Registration via typed client
-            const response = await api.post<{ data: Partial<Business> }>('/api/businesses', payload);
+            // Attempt Real Backend Registration via typed client to V1 SQLite Engine
+            const response = await api.post<any>('/v1/license/register', {
+                trade_name: formData.tradeName,
+                legal_name: formData.legalName,
+                gst_number: formData.gstNumber,
+                business_category: formData.category,
+                address_proof_url: formData.proofOfAddress
+            });
             
             const registered = { 
                 ...payload, 
-                ...(response.data || {}), 
-                id: response.data?.id || tempId 
+                id: response.merchant_id,
+                status: response.status,
+                qrToken: response.qr_uuid
             } as Business;
 
             onRegister(registered);
