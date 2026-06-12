@@ -50,11 +50,6 @@ class ApiClient {
     }
 
     async get<T>(endpoint: string): Promise<T> {
-        if (config.env === 'production') {
-            await new Promise(r => setTimeout(r, 400)); // Sandbox latency
-            return { data: [], shops: [], scans: [], top_risky_shops: [] } as unknown as T;
-        }
-        
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
             headers: this.getHeaders(),
         });
@@ -62,11 +57,6 @@ class ApiClient {
     }
 
     async post<T>(endpoint: string, body: unknown): Promise<T> {
-        if (config.env === 'production') {
-            await new Promise(r => setTimeout(r, 400));
-            return { success: true, message: 'Sandbox Success', data: {} } as unknown as T;
-        }
-
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
             method: 'POST',
             headers: this.getHeaders(),
@@ -76,11 +66,6 @@ class ApiClient {
     }
 
     async put<T>(endpoint: string, body: unknown): Promise<T> {
-        if (config.env === 'production') {
-            await new Promise(r => setTimeout(r, 400));
-            return { success: true, message: 'Sandbox Success', data: {} } as unknown as T;
-        }
-
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
             method: 'PUT',
             headers: this.getHeaders(),
@@ -90,11 +75,6 @@ class ApiClient {
     }
 
     async upload<T>(endpoint: string, formData: FormData): Promise<T> {
-        if (config.env === 'production') {
-            await new Promise(r => setTimeout(r, 800));
-            return { success: true, message: 'Sandbox Upload Success', url: '/placeholder.jpg' } as unknown as T;
-        }
-
         const headers: HeadersInit = {};
         const token = localStorage.getItem(config.auth.tokenKey);
         if (token) {

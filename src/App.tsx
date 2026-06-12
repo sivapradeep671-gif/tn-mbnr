@@ -98,12 +98,6 @@ function AppContent() {
 
     // Health check for backend
     useEffect(() => {
-        if (config.env === 'production') {
-            // In Sandbox mode, we don't care about backend health
-            setIsBackendOffline(true);
-            return;
-        }
-        
         const checkBackend = async () => {
             const isOnline = await api.checkHealth();
             if (!isOnline) {
@@ -254,15 +248,6 @@ function AppContent() {
           ⚠️ PROTOTYPE DEMONSTRATION | {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
         {isBackendOffline && config.env !== 'production' && (
-          <div className="w-full bg-red-500/95 text-white text-[10px] font-black py-2 px-4 text-center tracking-[0.2em] uppercase border-b border-red-600/20 shadow-lg animate-pulse">
-            🚨 Render Server is Booting Up (Free Tier Sleep). Please wait 50 seconds and refresh the page.
-          </div>
-        )}
-        {config.env === 'production' && (
-          <div className="w-full bg-emerald-500/95 text-white text-[10px] font-black py-2 px-4 text-center tracking-[0.2em] uppercase border-b border-emerald-600/20 shadow-lg">
-            ⚡ PERMANENT SANDBOX MODE ACTIVE — Running locally for maximum demonstration speed.
-          </div>
-        )}
       </div>
 
       <Navbar currentView={currentView} setCurrentView={setCurrentView} />
