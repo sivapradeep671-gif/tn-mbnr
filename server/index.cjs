@@ -120,9 +120,7 @@ const apiLimiter = rateLimit({
     legacyHeaders: false
 });
 
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['https://sivapradeep671-gif.github.io', 'https://tn-mbnr.onrender.com'] 
-    : '*';
+const allowedOrigins = '*';
 
 app.use(cors({
     origin: allowedOrigins,
