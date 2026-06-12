@@ -1239,6 +1239,6 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`✅ Server Hardened & Running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server Hardened & Running on port ${PORT} (Bound to 0.0.0.0 for Render Web Service)`);
 });
