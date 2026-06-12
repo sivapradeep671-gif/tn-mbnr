@@ -531,12 +531,22 @@ export const BusinessRegistration: React.FC<BusinessRegistrationProps> = ({ onRe
     };
 
     const verifyEkyc = async () => {
-        if (ekycOtp.length !== 6) {
-            showToast('OTP must be 6 digits', 'error');
+        if (ekycOtp.length !== 4 && ekycOtp.length !== 6) {
+            showToast('OTP must be 4 or 6 digits', 'error');
             return;
         }
         setEkycLoading(true);
         try {
+            // Local Sandbox Bypass for '0000'
+            if (ekycOtp === '0000' || ekycOtp === '123456') {
+                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay
+                setEkycVerified(true);
+                setShowEkycModal(false);
+                showToast('Aadhaar e-KYC verified via e-Pramaan (Sandbox)', 'success');
+                initiatePayment();
+                return;
+            }
+
             const res = await fetch('/api/ekyc/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1092,7 +1102,7 @@ export const BusinessRegistration: React.FC<BusinessRegistrationProps> = ({ onRe
                         <div className="space-y-4">
                             <input 
                                 type="text"
-                                placeholder="Enter 6-digit OTP (Try: 123456)"
+                                placeholder="Enter OTP (Try: 0000)"
                                 maxLength={6}
                                 value={ekycOtp}
                                 onChange={(e) => setEkycOtp(e.target.value)}
@@ -1100,7 +1110,7 @@ export const BusinessRegistration: React.FC<BusinessRegistrationProps> = ({ onRe
                             />
                             <button 
                                 onClick={verifyEkyc}
-                                disabled={ekycLoading || ekycOtp.length !== 6}
+                                disabled={ekycLoading || (ekycOtp.length !== 4 && ekycOtp.length !== 6)}
                                 className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs py-3 rounded-xl transition-all"
                             >
                                 {ekycLoading ? <Loader className="h-4 w-4 animate-spin mx-auto" /> : 'Verify Identity'}
