@@ -11,9 +11,10 @@ import { TradeLicense } from './TradeLicense';
 
 interface MerchantDashboardProps {
     business: Business;
+    setCurrentView: (view: string) => void;
 }
 
-export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }) => {
+export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business, setCurrentView }) => {
     const { t } = useLanguage();
     useAuth();
     const [qrToken, setQrToken] = useState<string>('');
@@ -42,14 +43,14 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }
         setIsLoading(true);
         try {
             // Using the qrToken that was assigned during V1 registration
-            const tokenToUse = business.qrToken || business.id; 
+            const tokenToUse = (business as any).qrToken || business.id; 
             const response = await api.get<any>(`/v1/license/verify/${tokenToUse}?lat=${business.latitude}&lng=${business.longitude}`);
             setStatusData(response);
             setQrToken(tokenToUse);
         } catch {
             console.warn("[Merchant Authority] Backend Unreachable.");
             showToast('Unable to fetch live status from backend', 'warning');
-            setQrToken(business.qrToken || business.id);
+            setQrToken((business as any).qrToken || business.id);
         } finally {
             setIsLoading(false);
         }
@@ -248,6 +249,16 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }
                                             Surrender
                                         </button>
                                     </div>
+                                    
+                                    {business.status === 'Verified' && (
+                                        <button 
+                                            onClick={() => setCurrentView('B2B_MARKETPLACE')}
+                                            className="mt-4 w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all flex items-center justify-center gap-3 active:scale-95"
+                                        >
+                                            <Shield className="h-5 w-5" />
+                                            Enter B2B Trusted Network
+                                        </button>
+                                    )}
 
                                     {/* SLA Status Card */}
                                     {business.status === 'Pending' && business.sla_deadline_at && (
@@ -300,7 +311,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }
 
                                     <div className="flex gap-3 w-full max-w-[200px]">
                                         <button 
-                                            onClick={fetchNewToken}
+                                            onClick={fetchRealStatus}
                                             disabled={isLoading}
                                             className="flex-1 p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/5 transition-all active:scale-90 disabled:opacity-50"
                                             title="Manual Refresh"
@@ -399,7 +410,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ business }
                         </div>
                     </div>
 
-                    <NotificationCenter />
+                    <NotificationCenter isOpen={false} onClose={() => {}} />
                     {showLicense && <TradeLicense business={business} onClose={() => setShowLicense(false)} />}
                 </div>
             </div>

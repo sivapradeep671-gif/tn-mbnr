@@ -39,6 +39,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({ business
                 console.error("Failed to fetch strategic insights", error);
             } finally {
                 setIsAILoading(false);
+            }
         };
         fetchInsights();
     }, [businesses]);

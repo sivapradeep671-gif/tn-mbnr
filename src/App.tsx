@@ -12,7 +12,8 @@ import { ToastContainer } from './components/Toast';
 import { api } from './api/client';
 import { Mail, Shield, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useLanguage } from './context/LanguageContext';
-import { APP_VERSION } from './constants';
+
+const APP_VERSION = '1.2.0 (Dual-Theme Build)';
 import { config } from './config';
 import type { GlobalHandlers } from './types/types';
 import { SaaSProvider, useSaaS } from './context/SaaSContext';
@@ -41,12 +42,13 @@ const InspectorDashboard = lazy(() => import('./components/InspectorDashboard').
 const ExecutiveDashboard = lazy(() => import('./components/ExecutiveDashboard').then(m => ({ default: m.ExecutiveDashboard })));
 const AIAssistant = lazy(() => import('./components/extensions/AIAssistant'));
 const SaaSMarketplace = lazy(() => import('./components/SaaSMarketplace').then(m => ({ default: m.SaaSMarketplace })));
+const B2BMarketplace = lazy(() => import('./components/B2BMarketplace').then(m => ({ default: m.B2BMarketplace })));
 const SaaSPricing = lazy(() => import('./components/SaaSPricing').then(m => ({ default: m.SaaSPricing })));
 const SaaSAdmin = lazy(() => import('./components/SaaSAdmin').then(m => ({ default: m.SaaSAdmin })));
 const BusinessHealthDashboard = lazy(() => import('./components/BusinessHealthScore').then(m => ({ default: m.BusinessHealthDashboard })));
 const GrievanceRedressal = lazy(() => import('./components/GrievanceRedressal').then(m => ({ default: m.GrievanceRedressal })));
 
-const APP_VERSION = '1.2.0 (Dual-Theme Build)';
+
 
 function LoadingFallback() {
   return (
@@ -112,7 +114,7 @@ function AppContent() {
 
   // Strict View protection & Role-based routing
   useEffect(() => {
-    const publicViews = ['HOME', 'MAP', 'SCAN', 'REGISTRY', 'HEALTH_SCORE', 'MARKETPLACE', 'PRICING', 'LOGIN', 'REGISTER_CITIZEN', 'REGISTER', 'REPORT', 'GRIEVANCE'];
+    const publicViews = ['HOME', 'MAP', 'SCAN', 'REGISTRY', 'HEALTH_SCORE', 'MARKETPLACE', 'B2B_MARKETPLACE', 'PRICING', 'LOGIN', 'REGISTER_CITIZEN', 'REGISTER', 'REPORT', 'GRIEVANCE'];
     
     // If not logged in and trying to access a protected view, redirect to login
     if (!user && !publicViews.includes(currentView)) {
@@ -198,6 +200,8 @@ function AppContent() {
               return <Login onLoginSuccess={handleLoginSuccess} />;
             case 'MARKETPLACE':
               return <SaaSMarketplace />;
+            case 'B2B_MARKETPLACE':
+              return <B2BMarketplace businesses={[]} setCurrentView={setCurrentView} />;
             case 'PRICING':
               return <SaaSPricing />;
             case 'SAAS_ADMIN':
@@ -205,7 +209,7 @@ function AppContent() {
             case 'DASHBOARD':
               if (user?.role === 'business') {
                 const business = businesses.find(b => b.id === user.id) || businesses[0];
-                return <MerchantDashboard business={business} />;
+                return <MerchantDashboard business={business} setCurrentView={setCurrentView} />;
               }
               if (user?.role === 'inspector') {
                 return <InspectorDashboard businesses={businesses} onUpdateStatus={updateStatus} />;

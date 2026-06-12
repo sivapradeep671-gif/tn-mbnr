@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { api } from '../api/client';
 import { 
     Search, 
     Filter, 
