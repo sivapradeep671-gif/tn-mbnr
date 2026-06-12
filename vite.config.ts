@@ -39,6 +39,20 @@ export default defineConfig(() => ({
                 maxEntries: 50
               }
             }
+          },
+          {
+            urlPattern: /^https:\/\/tn-mbnr-production\.onrender\.com\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           }
         ]
       },

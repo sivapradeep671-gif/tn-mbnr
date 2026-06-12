@@ -1,26 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { showToast } from './useToast';
-
-interface SyncAction {
-    id: string;
-    type: 'CERTIFY' | 'REPORT' | 'TAX_PAYMENT' | 'INSPECTION';
-    payload: unknown;
-    timestamp: number;
-}
+import { addToQueue, getQueue, removeFromQueue, type SyncAction } from '../utils/indexedDB';
 
 export const useOfflineSync = () => {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [syncQueue, setSyncQueue] = useState<SyncAction[]>(() => {
-        const savedQueue = localStorage.getItem('tn_mbnr_sync_queue');
-        return savedQueue ? JSON.parse(savedQueue) : [];
-    });
+    const [syncQueueLength, setSyncQueueLength] = useState<number>(0);
+
+    const refreshQueueLength = useCallback(async () => {
+        try {
+            const queue = await getQueue();
+            setSyncQueueLength(queue.length);
+        } catch (e) {
+            console.error("Failed to read IndexedDB", e);
+        }
+    }, []);
+
+    useEffect(() => {
+        refreshQueueLength();
+    }, [refreshQueueLength]);
 
     // Monitor Online Status
     useEffect(() => {
         const handleOnline = () => {
             setIsOnline(true);
             showToast('Connectivity Restored. Synchronizing records...', 'success');
+            processQueue();
         };
         const handleOffline = () => {
             setIsOnline(false);
@@ -37,53 +42,60 @@ export const useOfflineSync = () => {
     }, []);
 
     const processQueue = useCallback(async () => {
-        if (!isOnline || syncQueue.length === 0) return;
+        if (!isOnline) return;
 
-        // Process sequentially to maintain ledger integrity
-        for (const action of [...syncQueue]) {
-            try {
-                // Map actions to real API calls
-                switch (action.type) {
-                    case 'INSPECTION': {
-                        const data = action.payload as { businessId: string; status: string; hash?: string };
-                        await api.put(`/admin/businesses/${data.businessId}/status`, { 
-                            status: data.status,
-                            inspectorHash: data.hash 
-                        });
-                        break;
+        try {
+            const queue = await getQueue();
+            if (queue.length === 0) return;
+
+            // Process sequentially to maintain ledger integrity
+            for (const action of queue) {
+                try {
+                    // Map actions to real API calls
+                    switch (action.type) {
+                        case 'INSPECTION': {
+                            const data = action.payload as { businessId: string; status: string; hash?: string };
+                            await api.put(`/v1/license/admin/status`, { 
+                                businessId: data.businessId,
+                                status: data.status,
+                                inspectorHash: data.hash 
+                            });
+                            break;
+                        }
+                        case 'REPORT':
+                            await api.post('/v1/citizen/report', action.payload);
+                            break;
+                        case 'CERTIFY':
+                            await api.post('/v1/license/register', action.payload);
+                            break;
+                        case 'MARKETPLACE_LISTING':
+                            await api.post('/v1/marketplace/listings', action.payload);
+                            break;
+                        default:
+                            console.log(`Processing simulated sync for ${action.type}`);
                     }
-                    case 'REPORT':
-                        await api.post('/reports', action.payload);
-                        break;
-                    case 'CERTIFY':
-                        await api.post('/businesses', action.payload);
-                        break;
-                    default:
-                        console.log(`Processing simulated sync for ${action.type}`);
+
+                    // Remove only the successfully processed item
+                    await removeFromQueue(action.id);
+                    await refreshQueueLength();
+
+                } catch (error) {
+                    console.error(`Sync failed for ${action.id}:`, error);
+                    // Stop processing rest of the queue if we hit a network error
+                    break; 
                 }
-
-                // Remove only the successfully processed item
-                setSyncQueue(prev => {
-                    const filtered = prev.filter(item => item.id !== action.id);
-                    localStorage.setItem('tn_mbnr_sync_queue', JSON.stringify(filtered));
-                    return filtered;
-                });
-
-            } catch (error) {
-                console.error(`Sync failed for ${action.id}:`, error);
-                // We stop processing the rest of the queue if we hit a network error
-                // to maintain order, or we skip if it's a validation error.
-                break; 
             }
-        }
 
-        const remaining = JSON.parse(localStorage.getItem('tn_mbnr_sync_queue') || '[]');
-        if (syncQueue.length > 0 && remaining.length === 0) {
-            showToast(`Ledger synchronization complete.`, 'success');
+            const remaining = await getQueue();
+            if (queue.length > 0 && remaining.length === 0) {
+                showToast(`Ledger synchronization complete.`, 'success');
+            }
+        } catch (error) {
+            console.error("Failed to process queue from IndexedDB", error);
         }
-    }, [isOnline, syncQueue]);
+    }, [isOnline, refreshQueueLength]);
 
-    const addToSyncQueue = useCallback((type: SyncAction['type'], payload: unknown) => {
+    const addToSyncQueue = useCallback(async (type: SyncAction['type'], payload: unknown) => {
         const newAction: SyncAction = {
             id: crypto.randomUUID(),
             type,
@@ -91,34 +103,35 @@ export const useOfflineSync = () => {
             timestamp: Date.now()
         };
 
-        setSyncQueue(prev => {
-            const updated = [...prev, newAction];
-            localStorage.setItem('tn_mbnr_sync_queue', JSON.stringify(updated));
-            return updated;
-        });
-        
-        if (!isOnline) {
-            showToast(`Offline: ${type} queued for later sync.`, 'info');
-        } else {
-            // Trigger background sync attempt
-            processQueue();
+        try {
+            await addToQueue(newAction);
+            await refreshQueueLength();
+            
+            if (!isOnline) {
+                showToast(`Offline: ${type} queued securely for later sync.`, 'info');
+            } else {
+                // Trigger background sync attempt
+                processQueue();
+            }
+        } catch (error) {
+            console.error("Failed to add to IndexedDB queue", error);
+            showToast('Failed to queue offline action. Storage error.', 'error');
         }
-    }, [isOnline, processQueue]);
-
+    }, [isOnline, processQueue, refreshQueueLength]);
 
     // Attempt to process queue whenever coming online
     useEffect(() => {
-        if (isOnline && syncQueue.length > 0) {
+        if (isOnline && syncQueueLength > 0) {
             const timer = setTimeout(() => {
                 processQueue();
             }, 2000); // Wait 2s for stable connection
             return () => clearTimeout(timer);
         }
-    }, [isOnline, syncQueue.length, processQueue]);
+    }, [isOnline, syncQueueLength, processQueue]);
 
     return {
         isOnline,
-        syncQueueLength: syncQueue.length,
+        syncQueueLength,
         addToSyncQueue,
         processQueue
     };
