@@ -27,33 +27,42 @@ const config = {
 async function loadSecrets() {
   if (isLoaded) return config;
 
+  // Use Render's environment variables (process.env) as the primary source of truth.
+  // We still try to load from AWS Secrets Manager if configured, but we do NOT halt on failure.
   if (config.env === 'production' || config.env === 'staging') {
     try {
-      const client = new SecretsManagerClient({ region: 'ap-south-1' });
-      const command = new GetSecretValueCommand({ SecretId: `tn-mbnr/${config.env}/credentials` });
-      const response = await client.send(command);
-      
-      const vault = JSON.parse(response.SecretString);
-      
-      // Override local env with secure vault values
-      config.auth.secret = vault.AUTH_SECRET || config.auth.secret;
-      config.qr.secret = vault.QR_SECRET_KEY || config.qr.secret;
-      config.db.uri = vault.MONGODB_URI || config.db.uri;
-      config.ai.geminiKey = vault.VITE_GEMINI_API_KEY || config.ai.geminiKey;
-      config.communications.twilioSid = vault.TWILIO_ACCOUNT_SID || config.communications.twilioSid;
-      config.communications.twilioToken = vault.TWILIO_AUTH_TOKEN || config.communications.twilioToken;
-      config.communications.sendgridKey = vault.SENDGRID_API_KEY || config.communications.sendgridKey;
-      
-      console.log(`[SecretsManager] Successfully loaded secure credentials for ${config.env}`);
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        const client = new SecretsManagerClient({ region: 'ap-south-1' });
+        const command = new GetSecretValueCommand({ SecretId: `tn-mbnr/${config.env}/credentials` });
+        const response = await client.send(command);
+        
+        const vault = JSON.parse(response.SecretString);
+        
+        config.auth.secret = vault.AUTH_SECRET || config.auth.secret;
+        config.qr.secret = vault.QR_SECRET_KEY || config.qr.secret;
+        config.db.uri = vault.MONGODB_URI || config.db.uri;
+        config.ai.geminiKey = vault.VITE_GEMINI_API_KEY || config.ai.geminiKey;
+        config.communications.twilioSid = vault.TWILIO_ACCOUNT_SID || config.communications.twilioSid;
+        config.communications.twilioToken = vault.TWILIO_AUTH_TOKEN || config.communications.twilioToken;
+        config.communications.sendgridKey = vault.SENDGRID_API_KEY || config.communications.sendgridKey;
+        
+        console.log(`[SecretsManager] Successfully loaded secure credentials for ${config.env}`);
+      } else {
+        console.log(`[SecretsManager] AWS credentials not found in env. Falling back to native environment variables.`);
+      }
     } catch (error) {
-      console.error(`[SecretsManager] CRITICAL ERROR: Failed to retrieve secrets for ${config.env}`, error);
-      throw new Error('Vault access failed. Halting startup to prevent insecure deployment.');
+      console.warn(`[SecretsManager] Could not retrieve secrets from AWS: ${error.message}. Falling back to native environment variables.`);
     }
-  } else {
-    // Local fallback
-    config.auth.secret = process.env.AUTH_SECRET || config.auth.secret;
-    config.qr.secret = process.env.QR_SECRET_KEY || config.qr.secret;
   }
+
+  // Always apply local/Render environment variables on top of defaults
+  config.auth.secret = process.env.AUTH_SECRET || config.auth.secret;
+  config.qr.secret = process.env.QR_SECRET_KEY || config.qr.secret;
+  config.db.uri = process.env.MONGODB_URI || config.db.uri;
+  config.ai.geminiKey = process.env.VITE_GEMINI_API_KEY || config.ai.geminiKey;
+  config.communications.twilioSid = process.env.TWILIO_ACCOUNT_SID || config.communications.twilioSid;
+  config.communications.twilioToken = process.env.TWILIO_AUTH_TOKEN || config.communications.twilioToken;
+  config.communications.sendgridKey = process.env.SENDGRID_API_KEY || config.communications.sendgridKey;
   
   isLoaded = true;
   return config;
