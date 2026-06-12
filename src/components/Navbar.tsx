@@ -3,6 +3,8 @@ import { Languages, Menu, X, LogOut, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { TenantSelector } from './TenantSelector';
+import { NotificationCenter } from './NotificationCenter';
+import { Bell } from 'lucide-react';
 
 interface NavbarProps {
     currentView: string;
@@ -13,6 +15,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView }) =
     const { t, language, toggleLanguage } = useLanguage();
     const { isAuthenticated, user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+    const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
     const [scrolled, setScrolled] = React.useState(false);
 
     React.useEffect(() => {
@@ -125,6 +128,25 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView }) =
                             </button>
 
                             <div className="h-8 w-px bg-white/10 mx-2"></div>
+
+                            {/* Notification Bell */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                    className="relative p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                                >
+                                    <Bell className="h-5 w-5" />
+                                    {/* Unread Badge (Mocked to 2) */}
+                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-slate-900 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                                </button>
+                                
+                                <NotificationCenter 
+                                    isOpen={isNotificationOpen} 
+                                    onClose={() => setIsNotificationOpen(false)} 
+                                />
+                            </div>
+
+                            <div className="h-8 w-px bg-white/10 mx-2 hidden lg:block"></div>
 
                             {/* Login/Dashboard Button */}
                             {!isAuthenticated ? (
