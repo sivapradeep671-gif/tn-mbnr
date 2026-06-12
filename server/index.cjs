@@ -72,12 +72,10 @@ const tnMbnrChain = new Blockchain();
                 logger.info("Blockchain synchronized from MongoDB", { blocks: tnMbnrChain.chain.length });
             }
         } else {
-            logger.error("CRITICAL: MongoDB is offline. Cannot start server.");
-            process.exit(1);
+            logger.warn("WARNING: MongoDB is offline. Server running in degraded mode without Gamification.");
         }
     } catch (bootErr) {
-        logger.error("MongoDB bootstrap error", { error: bootErr.message });
-        process.exit(1);
+        logger.warn("MongoDB bootstrap error, continuing in degraded mode.", { error: bootErr.message });
     }
 })();
 

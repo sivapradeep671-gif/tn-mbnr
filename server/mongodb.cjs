@@ -5,7 +5,7 @@ dotenv.config();
 
 const config = require('./config/secrets.cjs');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tn_mbnr';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://sivapradeep671_db_user:Zoe435@cluster0.ymxtv3a.mongodb.net/tn_mbnr?retryWrites=true&w=majority&appName=Cluster0';
 
 const connectDB = async () => {
     try {
