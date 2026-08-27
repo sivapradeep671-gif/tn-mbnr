@@ -1,0 +1,7 @@
+import{s as i}from"./index-DUcga4PS.js";const r={sendSms:async(e,t)=>(console.log(`[TrustReg Communications] Initiating SMS protocol for: ${e}`),console.info("%c[MOCK MODE] SMS simulation successful.","color: #eab308; font-weight: bold;"),!0)},c={sendEmail:async(e,t,s)=>(console.log(`[TrustReg Communications] Initiating Email protocol for: ${e}`),console.info("%c[MOCK MODE] Email simulation successful.","color: #eab308; font-weight: bold;"),!0)},n={send:async e=>{console.log(`[Notification Authority] Dispatching ${e.type} to recipient...`);let t=!1;if(e.type==="SMS"?t=await r.sendSms(e.to,e.message):t=await c.sendEmail(e.to,e.subject||"TrustReg TN Security Update",e.message),t){const s=e.type==="SMS"?"📱":"📧";i(`${s} ${e.type} dispatched to ${(e.to||"").slice(0,3)}***`,"success")}else i(`Failed to dispatch ${e.type} alert`,"error");return t},alertOwner:async(e,t,s)=>{const o=`TRUSTREG ALERT: Suspicious activity detected for your business "${e}". Reason: ${s}. Please verify your QR signage.`;return n.send({to:t,type:"SMS",message:o})},sendMonthlyReport:async(e,t,s)=>{const o=`
+            <h2>TrustReg TN: Monthly Integrity Report</h2>
+            <p><strong>Business:</strong> ${t}</p>
+            <p><strong>Verified Scans:</strong> ${s.verified}</p>
+            <p><strong>Security Flags:</strong> ${s.failed}</p>
+            <p>Your business maintains an official integrity status of "EXCELLENT".</p>
+        `;return n.send({to:e,type:"EMAIL",subject:`Monthly Report: ${t}`,message:o})}};export{n as notificationService};
