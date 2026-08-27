@@ -24,13 +24,13 @@ export const AccessibilityToolbar: React.FC = () => {
 
     return (
         <div className="bg-slate-950/80 backdrop-blur-md border-b border-white/5 text-[11px] text-slate-300 py-2 px-6 flex flex-col sm:flex-row items-center justify-between z-[60] relative ignore-invert font-medium tracking-wide">
-            <div className="flex items-center space-x-3 mb-3 sm:mb-0">
-                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-600 to-yellow-400 text-black">
+            <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-0 flex-wrap">
+                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-600 to-yellow-400 text-black shrink-0">
                     <Monitor className="w-3 h-3" />
                 </div>
-                <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200 uppercase tracking-widest hidden sm:inline">GOVERNMENT OF TAMIL NADU</span>
-                <span className="hidden sm:inline text-slate-600">|</span>
-                <span className="text-slate-400 uppercase tracking-wider">Municipal Administration & Water Supply</span>
+                <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200 uppercase tracking-widest text-[10px] sm:text-xs">GOVERNMENT OF TAMIL NADU</span>
+                <span className="text-slate-600 font-bold">|</span>
+                <span className="text-slate-300 font-bold uppercase tracking-wider text-[10px] sm:text-xs">Municipal Administration & Water Supply</span>
             </div>
             
             <div className="flex items-center space-x-4">
