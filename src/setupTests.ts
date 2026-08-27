@@ -7,6 +7,65 @@ afterEach(() => {
   cleanup();
 });
 
+// Mock IndexedDB for test environment
+if (typeof globalThis.indexedDB === 'undefined') {
+  const mockStore = new Map();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).indexedDB = {
+    open: vi.fn().mockImplementation(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const req: any = {
+        result: {
+          objectStoreNames: { contains: () => true, createObjectStore: () => ({ createIndex: () => {} }) },
+          transaction: () => ({
+            objectStore: () => ({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              put: (item: any) => {
+                if (item && item.id) mockStore.set(item.id, item);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const putReq: any = {};
+                setTimeout(() => putReq.onsuccess && putReq.onsuccess({ target: putReq }), 0);
+                return putReq;
+              },
+              get: (id: string) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const getReq: any = { result: mockStore.get(id) || null };
+                setTimeout(() => getReq.onsuccess && getReq.onsuccess({ target: getReq }), 0);
+                return getReq;
+              },
+              getAll: () => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const getAllReq: any = { result: Array.from(mockStore.values()) };
+                setTimeout(() => getAllReq.onsuccess && getAllReq.onsuccess({ target: getAllReq }), 0);
+                return getAllReq;
+              },
+              delete: (id: string) => {
+                mockStore.delete(id);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const delReq: any = {};
+                setTimeout(() => delReq.onsuccess && delReq.onsuccess({ target: delReq }), 0);
+                return delReq;
+              },
+              clear: () => {
+                mockStore.clear();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const clrReq: any = {};
+                setTimeout(() => clrReq.onsuccess && clrReq.onsuccess({ target: clrReq }), 0);
+                return clrReq;
+              }
+            })
+          })
+        }
+      };
+      setTimeout(() => {
+        if (req.onupgradeneeded) req.onupgradeneeded({ target: req });
+        if (req.onsuccess) req.onsuccess({ target: req });
+      }, 0);
+      return req;
+    })
+  };
+}
+
 // Mock Web Speech API (Speech Synthesis)
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'speechSynthesis', {

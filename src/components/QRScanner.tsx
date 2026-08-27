@@ -9,6 +9,7 @@ import { showToast } from '../hooks/useToast';
 import type { ScanResult } from '../types/scan';
 import { api } from '../api/client';
 import { notificationService } from '../services/notificationService';
+import { parseAndVerifyQROffline } from '../utils/cryptoOffline';
 
 interface QRScannerProps {
     businesses: Business[];
@@ -72,7 +73,28 @@ export const QRScanner: React.FC<QRScannerProps> = ({ businesses }) => {
             try {
                 const { latitude, longitude } = position.coords;
 
-                // --- 1. V1 Production Server Verification ---
+                // --- 1. Network & Verification Decision Path ---
+                if (!navigator.onLine) {
+                    const offlineRes = await parseAndVerifyQROffline(decodedText, latitude, longitude);
+                    const mappedOfflineResult: ScanResult = {
+                        status: offlineRes.status === 'OFFLINE_CRYPTOGRAPHICALLY_VERIFIED' ? 'VALID' : 'INVALID',
+                        message: offlineRes.message_en,
+                        verifiedAt: new Date().toISOString(),
+                        business: offlineRes.payload ? {
+                            name: offlineRes.payload.trade_name || 'Cached Municipal Merchant',
+                            id: offlineRes.payload.business_id || 'UNKNOWN',
+                            lat: latitude,
+                            lng: longitude
+                        } : undefined
+                    };
+
+                    setScanResult(mappedOfflineResult);
+                    handleScanResult(mappedOfflineResult);
+                    showToast(offlineRes.message_en, offlineRes.status === 'OFFLINE_CRYPTOGRAPHICALLY_VERIFIED' ? 'warning' : 'error');
+                    return;
+                }
+
+                // --- 2. V1 Production Server Verification ---
                 try {
                     const serverResult = await api.get<any>(`/v1/license/verify/${decodedText}?lat=${latitude}&lng=${longitude}`);
 
@@ -93,20 +115,16 @@ export const QRScanner: React.FC<QRScannerProps> = ({ businesses }) => {
                     handleScanResult(mappedResult);
                     
                 } catch (serverError: any) {
-                    // Handle 404 Counterfeit or network errors gracefully
-                    if (serverError.message && serverError.message.includes('COUNTERFEIT')) {
-                         const counterfeitResult: ScanResult = {
-                             status: 'COUNTERFEIT',
-                             message: "This QR code does not match any valid municipal record.",
-                             verifiedAt: new Date().toISOString()
-                         };
-                         setScanResult(counterfeitResult);
-                         handleScanResult(counterfeitResult);
-                    } else {
-                        const msg = "Service unavailable: " + (serverError.message || "Network Error");
-                        setError(msg);
-                        showToast(msg, 'error');
-                    }
+                    // Fall back to offline verification on network error
+                    const offlineRes = await parseAndVerifyQROffline(decodedText, latitude, longitude);
+                    const mappedOfflineResult: ScanResult = {
+                        status: offlineRes.status === 'OFFLINE_CRYPTOGRAPHICALLY_VERIFIED' ? 'VALID' : 'INVALID',
+                        message: offlineRes.message_en,
+                        verifiedAt: new Date().toISOString()
+                    };
+                    setScanResult(mappedOfflineResult);
+                    handleScanResult(mappedOfflineResult);
+                    showToast(offlineRes.message_en, 'warning');
                 }
 
             } catch {

@@ -1,8 +1,7 @@
-// A lightweight wrapper for IndexedDB to store offline sync queues
+// Compatibility adapter re-exporting from src/db/indexedDB.ts
+export * from '../db/indexedDB';
 
-const DB_NAME = 'tn_mbnr_offline_sync';
-const DB_VERSION = 1;
-const STORE_NAME = 'sync_queue';
+import { addToSyncQueue as dbAddToSyncQueue, getPendingSyncQueue } from '../db/indexedDB';
 
 export interface SyncAction {
     id: string;
@@ -11,71 +10,21 @@ export interface SyncAction {
     timestamp: number;
 }
 
-export const initDB = (): Promise<IDBDatabase> => {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = (event: any) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-            }
-        };
-
-        request.onsuccess = (event: any) => {
-            resolve(event.target.result);
-        };
-
-        request.onerror = (event: any) => {
-            reject(event.target.error);
-        };
-    });
-};
-
 export const addToQueue = async (action: SyncAction): Promise<void> => {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.add(action);
-
-        request.onsuccess = () => resolve();
-        request.onerror = (e: any) => reject(e.target.error);
+    await dbAddToSyncQueue({
+        id: action.id,
+        type: action.type,
+        payload: action.payload,
+        max_attempts: 5
     });
 };
 
 export const getQueue = async (): Promise<SyncAction[]> => {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
-
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = (e: any) => reject(e.target.error);
-    });
-};
-
-export const removeFromQueue = async (id: string): Promise<void> => {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.delete(id);
-
-        request.onsuccess = () => resolve();
-        request.onerror = (e: any) => reject(e.target.error);
-    });
-};
-
-export const clearQueue = async (): Promise<void> => {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.clear();
-
-        request.onsuccess = () => resolve();
-        request.onerror = (e: any) => reject(e.target.error);
-    });
+    const pending = await getPendingSyncQueue();
+    return pending.map(item => ({
+        id: item.id,
+        type: item.type as SyncAction['type'],
+        payload: item.payload,
+        timestamp: item.created_at
+    }));
 };

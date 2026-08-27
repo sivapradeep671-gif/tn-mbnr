@@ -22,13 +22,16 @@ vi.mock('./useToast', () => ({
     showToast: vi.fn(),
 }));
 
+import { clearAllCachedStores } from '../db/indexedDB';
+
 const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(SaaSProvider, null, children);
 
 describe('useBusinesses Hook', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
         localStorage.clear();
+        await clearAllCachedStores();
     });
 
     it('should fetch businesses and reports on mount', async () => {

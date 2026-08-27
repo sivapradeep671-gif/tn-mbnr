@@ -18,6 +18,7 @@ import { config } from './config';
 import type { GlobalHandlers } from './types/types';
 import { SaaSProvider, useSaaS } from './context/SaaSContext';
 import { AccessibilityToolbar } from './components/AccessibilityToolbar';
+import { NetworkStatusBanner } from './components/NetworkStatusBanner';
 
 // Tell TypeScript about our custom window properties
 declare global {
@@ -92,7 +93,7 @@ function AppContent() {
   const { t } = useLanguage();
   const { user, isLoading: authLoading } = useAuth();
   const { currentTenant } = useSaaS();
-  const { businesses, reports, updateStatus, registerBusiness } = useBusinesses();
+  const { businesses, reports, updateStatus, registerBusiness, lastSyncedAt } = useBusinesses();
   
   const [currentView, setCurrentView] = useState('HOME');
   const [reportPrefill, setReportPrefill] = useState<string>('');
@@ -242,18 +243,18 @@ function AppContent() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-950 text-white font-sans selection:bg-yellow-500/30 transition-all duration-500 ${isBackendOffline ? 'pt-24' : 'pt-20'}`}>
+    <div className={`min-h-screen bg-slate-950 text-white font-sans selection:bg-yellow-500/30 transition-all duration-500 pt-36`}>
       <ToastContainer />
       
       {/* Universal Priority Banner Stack */}
       <div className="fixed top-0 left-0 w-full z-[60] flex flex-col">
         <AccessibilityToolbar />
+        <NetworkStatusBanner lastSyncedAt={lastSyncedAt} />
         <div className="w-full bg-yellow-500/95 text-slate-900 text-[9px] font-black py-1.5 px-4 text-center tracking-[0.3em] uppercase border-b border-yellow-600/20">
           ⚠️ PROTOTYPE DEMONSTRATION | {t.footer.disclaimer_banner} | {currentTenant.name} Platform v{APP_VERSION}
         </div>
+        <Navbar currentView={currentView} setCurrentView={setCurrentView} />
       </div>
-
-      <Navbar currentView={currentView} setCurrentView={setCurrentView} />
       
       <main>
         {authLoading ? (

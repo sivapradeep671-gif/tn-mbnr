@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+mongoose.set('bufferCommands', false);
 
 // --- Business Schema (Registry Node) ---
 const businessSchema = new mongoose.Schema({
@@ -39,7 +40,7 @@ const businessSchema = new mongoose.Schema({
     documents_metadata: mongoose.Schema.Types.Mixed,
     website: String,
     blockchain_hash: String
-}, { timestamps: true });
+}, { timestamps: true, bufferCommands: false });
 
 // --- Ledger Schema (Blockchain persistence) ---
 const ledgerSchema = new mongoose.Schema({
@@ -50,7 +51,7 @@ const ledgerSchema = new mongoose.Schema({
     previousHash: { type: String, required: true },
     hash: { type: String, required: true },
     nonce: { type: Number, required: true }
-});
+}, { bufferCommands: false });
 
 // --- Scan Schema (Verification Intel) ---
 const scanSchema = new mongoose.Schema({
@@ -63,7 +64,7 @@ const scanSchema = new mongoose.Schema({
     distance: Number,
     scanned_at: { type: Date, default: Date.now },
     device_id: String
-}, { timestamps: true });
+}, { timestamps: true, bufferCommands: false });
 
 // --- Report Schema (Citizen Intel) ---
 const reportSchema = new mongoose.Schema({
@@ -76,7 +77,7 @@ const reportSchema = new mongoose.Schema({
     status: { type: String, default: 'Submitted' },
     image_path: String,
     timestamp: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, { timestamps: true, bufferCommands: false });
 
 // --- Registry Approval Schema (Workflow) ---
 const approvalSchema = new mongoose.Schema({
@@ -92,7 +93,7 @@ const approvalSchema = new mongoose.Schema({
     valid_from: Date,
     valid_to: Date,
     attachment_url: String
-}, { timestamps: true });
+}, { timestamps: true, bufferCommands: false });
 
 // --- Grievance Schema ---
 const grievanceSchema = new mongoose.Schema({
@@ -108,7 +109,7 @@ const grievanceSchema = new mongoose.Schema({
     resolved_at: Date,
     resolution_notes: String,
     escalation_level: { type: Number, default: 0 }
-}, { timestamps: true });
+}, { timestamps: true, bufferCommands: false });
 
 const Business = mongoose.models.Business || mongoose.model('Business', businessSchema);
 const Ledger = mongoose.models.Ledger || mongoose.model('Ledger', ledgerSchema);

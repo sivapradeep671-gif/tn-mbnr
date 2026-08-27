@@ -67,8 +67,11 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-36e57b92'], (function (workbox) { 'use strict';
+define(['./workbox-6043c3ec'], (function (workbox) { 'use strict';
 
+  workbox.setCacheNameDetails({
+    prefix: "tn-mbnr-static-v1"
+  });
   self.skipWaiting();
   workbox.clientsClaim();
 
@@ -79,14 +82,14 @@ define(['./workbox-36e57b92'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "index.html",
-    "revision": "0.167bq65spjg"
+    "revision": "0.ljfelh44ug8"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
   workbox.registerRoute(/^https:\/\/fonts\.googleapis\.com\/.*/i, new workbox.CacheFirst({
-    "cacheName": "google-fonts-cache",
+    "cacheName": "tn-mbnr-fonts-v1",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 10,
       maxAgeSeconds: 31536000
@@ -94,14 +97,15 @@ define(['./workbox-36e57b92'], (function (workbox) { 'use strict';
       statuses: [0, 200]
     })]
   }), 'GET');
-  workbox.registerRoute(/\.(?:png|jpg|jpeg|svg|gif)$/, new workbox.StaleWhileRevalidate({
-    "cacheName": "images-cache",
+  workbox.registerRoute(/\.(?:png|jpg|jpeg|svg|gif|ico)$/, new workbox.StaleWhileRevalidate({
+    "cacheName": "tn-mbnr-images-v1",
     plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 50
+      maxEntries: 50,
+      maxAgeSeconds: 2592000
     })]
   }), 'GET');
-  workbox.registerRoute(/^https:\/\/tn-mbnr-production\.onrender\.com\/api\/.*/i, new workbox.NetworkFirst({
-    "cacheName": "api-cache",
+  workbox.registerRoute(/\/api\/v1\/license\/registry.*/i, new workbox.NetworkFirst({
+    "cacheName": "tn-mbnr-runtime-v1",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
       maxAgeSeconds: 86400

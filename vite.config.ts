@@ -15,12 +15,13 @@ export default defineConfig(() => ({
         clientsClaim: true,
         skipWaiting: true,
         navigateFallback: 'index.html',
+        cacheId: 'tn-mbnr-static-v1',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-cache',
+              cacheName: 'tn-mbnr-fonts-v1',
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365 
@@ -31,20 +32,21 @@ export default defineConfig(() => ({
             }
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico)$/,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'images-cache',
+              cacheName: 'tn-mbnr-images-v1',
               expiration: {
-                maxEntries: 50
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 30
               }
             }
           },
           {
-            urlPattern: /^https:\/\/tn-mbnr-production\.onrender\.com\/api\/.*/i,
+            urlPattern: /\/api\/v1\/license\/registry.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'tn-mbnr-runtime-v1',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 // 24 hours

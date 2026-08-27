@@ -1,4 +1,4 @@
-const connectDB = require('./mongodb.cjs');
+const { connectDB } = require('./mongodb.cjs');
 const schemas = require('./mongodb_schema.cjs');
 
 /**
