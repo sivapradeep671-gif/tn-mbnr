@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.next
+web/.next
+web/node_modules
 
 # Editor directories and files
 .vscode/*
@@ -32,6 +35,21 @@ dist-ssr
 *.db
 *.sqlite
 
-# Uploads
-server/uploads/*
-!server/uploads/.gitkeep
+# Temporary test & debug outputs
+*_output.txt
+*_results.txt
+*_utf8.txt
+tsc_errors.txt
+tmp_tsc_errors.txt
+files.txt
+files_app.txt
+lint_output.txt
+node_origin.txt
+origin.txt
+server_debug.log
+temp_server.log
+error.log
+errors.log
+build_log.txt
+dev_log.txt
+
