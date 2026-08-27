@@ -14,9 +14,9 @@ interface Notification {
 const MOCK_NOTIFICATIONS: Notification[] = [
     {
         id: '1',
-        type: 'ALERT',
-        title: 'Sandbox Mode Initialized',
-        message: 'The network is running on a localized cache. Render server bypassed.',
+        type: 'SUCCESS',
+        title: 'Render Grid Connected',
+        message: 'Live connection established with Render production backend server.',
         timestamp: new Date().toISOString(),
         read: false
     },

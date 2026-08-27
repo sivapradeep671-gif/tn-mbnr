@@ -19,6 +19,14 @@ interface AppConfig {
 
 const ENV = (import.meta.env.MODE as 'development' | 'staging' | 'production') || 'development';
 
+const getDefaultProductionApiUrl = () => {
+    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return '/api';
+    }
+    return 'https://tn-mbnr-production.onrender.com/api';
+};
+
 const configs: Record<string, AppConfig> = {
     development: {
         env: 'development',
@@ -35,7 +43,7 @@ const configs: Record<string, AppConfig> = {
     },
     staging: {
         env: 'staging',
-        apiUrl: '/api', // Relative path for proxied staging
+        apiUrl: import.meta.env.VITE_API_URL || '/api',
         geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
         features: {
             enableBlockchain: true,
@@ -48,7 +56,7 @@ const configs: Record<string, AppConfig> = {
     },
     production: {
         env: 'production',
-        apiUrl: import.meta.env.VITE_API_URL || '/api',
+        apiUrl: getDefaultProductionApiUrl(),
         geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
         features: {
             enableBlockchain: true,
